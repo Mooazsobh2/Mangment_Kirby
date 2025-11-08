@@ -1973,7 +1973,7 @@ const CCTVPanel = () => {
  * مهام: التذاكر/الشكاوى، الاستقبال، متابعة الفنيين، الأقساط، التركيبات، البنزين/المسارات
  ***********************************/
 function ReceptionPanel() {
-  const [tab, setTab] = useState("tickets"); // tickets | schedule | technicians | installments | installs | fuel
+  const [tab, setTab] = useState("tickets"); // tickets | schedule | technicians | installments | installs | fuel | statements
   const [filter, setFilter] = useState("");
 
   return (
@@ -1981,7 +1981,9 @@ function ReceptionPanel() {
       <div className="rounded-3xl p-4 bg-gradient-to-r from-red-800 to-red-600 text-white flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">الريسبشن</h2>
-          <p className="text-sm text-red-100">تسجيل صيانات/شكاوى · المواعيد · متابعة الفنيين · الأقساط · التركيبات · البنزين</p>
+          <p className="text-sm text-red-100">
+            تسجيل صيانات/شكاوى · المواعيد · متابعة الفنيين · الأقساط · التركيبات · البنزين · كشوفات الزبائن
+          </p>
         </div>
         <div className="flex gap-2 text-sm">
           {[
@@ -1991,8 +1993,17 @@ function ReceptionPanel() {
             { key: "installments", label: "الأقساط" },
             { key: "installs", label: "التركيبات" },
             { key: "fuel", label: "البنزين/المسارات" },
+            { key: "statements", label: "كشوفات الزبائن" }, // جديد
           ].map((t) => (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`px-3 py-1.5 rounded-2xl ${tab === t.key ? "bg-white text-red-800" : "bg-white/10 text-white"}`}>{t.label}</button>
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`px-3 py-1.5 rounded-2xl ${
+                tab === t.key ? "bg-white text-red-800" : "bg-white/10 text-white"
+              }`}
+            >
+              {t.label}
+            </button>
           ))}
         </div>
       </div>
@@ -2006,62 +2017,51 @@ function ReceptionPanel() {
               <input className="border rounded-2xl p-2" placeholder="اسم العميل" />
               <input className="border rounded-2xl p-2" placeholder="رقم الجوال" />
               <input className="border rounded-2xl p-2 md:col-span-2" placeholder="العنوان / الموقع" />
-              <select className="border rounded-2xl p-2"><option>نوع الطلب: صيانة</option><option>شكوى</option><option>فحص</option></select>
-              <select className="border rounded-2xl p-2"><option>الأولوية: عادي</option><option>مرتفع</option><option>حرج</option></select>
+              <select className="border rounded-2xl p-2">
+                <option>نوع الطلب: صيانة</option>
+                <option>شكوى</option>
+                <option>فحص</option>
+              </select>
+              <select className="border rounded-2xl p-2">
+                <option>الأولوية: عادي</option>
+                <option>مرتفع</option>
+                <option>حرج</option>
+              </select>
               <textarea className="border rounded-2xl p-2 md:col-span-2" rows={3} placeholder="وصف المشكلة" />
-              <button className="rounded-2xl px-4 py-2 bg-red-800 text-white md:col-span-2">حفظ التذكرة وتعيين أقرب فني</button>
+              <button className="rounded-2xl px-4 py-2 bg-red-800 text-white md:col-span-2">
+                حفظ التذكرة وتعيين أقرب فني
+              </button>
             </div>
           </div>
           <div className="p-4 border rounded-2xl shadow-sm bg-white">
             <h4 className="font-semibold mb-2">بحث سريع</h4>
-            <input value={filter} onChange={(e)=>setFilter(e.target.value)} className="border rounded-2xl p-2 w-full text-sm" placeholder="ابحث بالاسم/الهاتف" />
+            <input
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="border rounded-2xl p-2 w-full text-sm"
+              placeholder="ابحث بالاسم/الهاتف"
+            />
             <ul className="mt-3 space-y-2 text-sm">
-              {sampleLeads.filter(l => (l.name + l.phone).includes(filter)).map(l => (
-                <li key={l.id} className="p-2 border rounded-2xl">
-                  <div className="font-medium">{l.name}</div>
-                  <div className="text-xs text-gray-500">{l.phone} · {l.area}</div>
-                  <button className="mt-2 px-3 py-1.5 rounded-2xl border">فتح تذكرة</button>
-                </li>
-              ))}
+              {sampleLeads
+                .filter((l) => (l.name + l.phone).includes(filter))
+                .map((l) => (
+                  <li key={l.id} className="p-2 border rounded-2xl">
+                    <div className="font-medium">{l.name}</div>
+                    <div className="text-xs text-gray-500">
+                      {l.phone} · {l.area}
+                    </div>
+                    <button className="mt-2 px-3 py-1.5 rounded-2xl border">فتح تذكرة</button>
+                  </li>
+                ))}
             </ul>
           </div>
         </div>
       )}
 
-      {/* المواعيد */}
-      {tab === "schedule" && (
-        <div className="p-4 border rounded-2xl shadow-sm bg-white">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">تقويم المواعيد</h3>
-            <div className="text-xs text-gray-500">عرض أسبوعي</div>
-          </div>
-          <div className="h-72 border border-dashed rounded-2xl flex items-center justify-center text-gray-500 text-sm">Placeholder Calendar</div>
-        </div>
-      )}
+      {tab === "schedule" && <ScheduleAssignPanel />}
 
       {/* متابعة الفنيين */}
-      {tab === "technicians" && (
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 p-4 border rounded-2xl shadow-sm bg-white">
-            <h3 className="font-semibold mb-2">الخريطة والمسارات (وهمي)</h3>
-            <div className="h-72 border border-dashed rounded-2xl flex items-center justify-center text-gray-500 text-sm">خريطة توضح أقرب فني للعميل + تتبع حي</div>
-          </div>
-          <div className="p-4 border rounded-2xl shadow-sm bg-white">
-            <h4 className="font-semibold mb-2">حالة الفنيين الآن</h4>
-            <ul className="text-sm space-y-2">
-              {sampleEngineers.map(e => (
-                <li key={e.id} className="p-2 border rounded-2xl flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">{e.name}</div>
-                    <div className="text-xs text-gray-500">{e.area}</div>
-                  </div>
-                  <Badge color={e.status === "available" ? "green" : e.status === "busy" ? "yellow" : "gray"}>{e.status === "available" ? "متاح" : e.status === "busy" ? "مشغول" : "غير متصل"}</Badge>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+      {tab === "technicians" && <ReceptionTechniciansPanel />}
 
       {/* الأقساط */}
       {tab === "installments" && (
@@ -2085,7 +2085,7 @@ function ReceptionPanel() {
                 </tr>
               </thead>
               <tbody>
-                {sampleInstallments.map(r => (
+                {sampleInstallments.map((r) => (
                   <tr key={r.id} className="border-t">
                     <td className="py-2">{r.id}</td>
                     <td className="py-2">{r.customer}</td>
@@ -2093,7 +2093,9 @@ function ReceptionPanel() {
                     <td className="py-2">{r.start}</td>
                     <td className="py-2">{r.end}</td>
                     <td className="py-2">{r.monthly}</td>
-                    <td className="py-2">{r.paidMonths}/{r.totalMonths}</td>
+                    <td className="py-2">
+                      {r.paidMonths}/{r.totalMonths}
+                    </td>
                     <td className="py-2">{r.totalMonths - r.paidMonths}</td>
                   </tr>
                 ))}
@@ -2108,11 +2110,13 @@ function ReceptionPanel() {
         <div className="p-4 border rounded-2xl shadow-sm bg-white">
           <h3 className="font-semibold mb-3">سجل التركيبات</h3>
           <div className="grid md:grid-cols-3 gap-3 text-sm">
-            {sampleInstallations.map(j => (
+            {sampleInstallations.map((j) => (
               <div key={j.id} className="p-3 border rounded-2xl">
                 <div className="font-medium">{j.customer}</div>
                 <div className="text-gray-600">{j.address}</div>
-                <div className="text-xs text-gray-500">التاريخ: {j.date} · الجهاز: {j.device}</div>
+                <div className="text-xs text-gray-500">
+                  التاريخ: {j.date} · الجهاز: {j.device}
+                </div>
                 <div className="text-xs mt-1">الفني: {j.engineer}</div>
               </div>
             ))}
@@ -2125,15 +2129,19 @@ function ReceptionPanel() {
         <div className="grid md:grid-cols-3 gap-4">
           <div className="md:col-span-2 p-4 border rounded-2xl shadow-sm bg-white">
             <h3 className="font-semibold mb-2">الخريطة والمسارات (وهمي)</h3>
-            <div className="h-72 border border-dashed rounded-2xl flex items-center justify-center text-gray-500 text-sm">مسارات اليوم حسب الفني والمسافة المقطوعة</div>
+            <div className="h-72 border border-dashed rounded-2xl flex items-center justify-center text-gray-500 text-sm">
+              مسارات اليوم حسب الفني والمسافة المقطوعة
+            </div>
           </div>
           <div className="p-4 border rounded-2xl shadow-sm bg-white">
             <h4 className="font-semibold mb-2">استهلاك البنزين</h4>
             <ul className="text-sm space-y-2">
-              {sampleFuel.map(f => (
+              {sampleFuel.map((f) => (
                 <li key={f.engineer} className="p-2 border rounded-2xl">
                   <div className="font-medium">{f.engineer}</div>
-                  <div className="text-xs text-gray-500">{f.date} · {f.distanceKm} كم · {f.liters} لتر</div>
+                  <div className="text-xs text-gray-500">
+                    {f.date} · {f.distanceKm} كم · {f.liters} لتر
+                  </div>
                   <div className="text-xs mt-1">{f.routes.join(" · ")}</div>
                 </li>
               ))}
@@ -2141,9 +2149,367 @@ function ReceptionPanel() {
           </div>
         </div>
       )}
+
+      {/* كشوفات الزبائن — جديد */}
+      {tab === "statements" && <CustomerStatementsSection />}
     </div>
   );
 }
+
+/* ===================== قسم كشوفات الزبائن ===================== */
+
+function CustomerStatementsSection() {
+  // بيانات تجريبية مطابقة للهيكل الظاهر في الكشف (يمكن الاستيراد من إكسل أيضًا)
+  const [rows, setRows] = useState<any[]>(sampleCustomerStatementRows);
+  const [q, setQ] = useState("");
+  const [selected, setSelected] = useState<any | null>(rows[0] || null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const customers = useMemo(() => {
+    const m = new Map<string, any>();
+    rows.forEach((r) => {
+      const key = `${r["اسم الزبون"]}#${r["الهاتف"] || ""}`;
+      if (!m.has(key)) m.set(key, r);
+    });
+    return Array.from(m.values());
+  }, [rows]);
+
+  const filteredRows = useMemo(() => {
+    if (!selected) return [];
+    return rows.filter((r) => {
+      const same =
+        r["اسم الزبون"] === selected["اسم الزبون"] &&
+        (selected["الهاتف"] ? r["الهاتف"] === selected["الهاتف"] : true);
+      if (!same) return false;
+      const d = normalizeDateLoose(r["تاريخ الحركة"] || r["التاريخ"] || r.date);
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo && d > dateTo) return false;
+      return true;
+    });
+  }, [rows, selected, dateFrom, dateTo]);
+
+  // استيراد إكسل (نفس ترتيب الأعمدة)
+  const importExcel = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls";
+    input.onchange = async (e: any) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      try {
+        const XLSX = await import("xlsx");
+        const data = await f.arrayBuffer();
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const list = XLSX.utils.sheet_to_json<any>(ws);
+        setRows(list);
+        if (list.length) setSelected(list[0]);
+        alert(`تم استيراد ${list.length} سطرًا من الكشف`);
+      } catch (e) {
+        console.error(e);
+        alert("تعذر قراءة ملف الإكسل");
+      }
+    };
+    input.click();
+  };
+
+  // طباعة / تصدير
+  const printNow = () => window.print();
+  const exportCSV = () => {
+    const cols = statementPreferredCols;
+    const header = cols.join(",");
+    const lines = filteredRows.map((r) =>
+      cols.map((c) => JSON.stringify(r[c] ?? "")).join(",")
+    );
+    const blob = new Blob([header + "\n" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `كشف-${selected?.["اسم الزبون"] || "عميل"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ملخص علوي
+  const summary = useMemo(() => {
+    const totalVisits = filteredRows.length;
+    const warranty = filteredRows.filter((r) =>
+      String(r["الضمان"] || "").includes("ضمان")
+    ).length;
+    const outWarranty = totalVisits - warranty;
+    return { totalVisits, warranty, outWarranty };
+  }, [filteredRows]);
+
+  return (
+    <div className="space-y-4 p-4 border rounded-2xl shadow-sm bg-white">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-semibold">كشوفات الزبائن</h3>
+        <div className="flex gap-2">
+          <button className="border rounded-2xl px-3 py-1.5 text-sm" onClick={importExcel}>
+            استيراد كشف (Excel)
+          </button>
+          <button className="border rounded-2xl px-3 py-1.5 text-sm" onClick={exportCSV}>
+            تصدير CSV
+          </button>
+          <button className="border rounded-2xl px-3 py-1.5 text-sm" onClick={printNow}>
+            طباعة
+          </button>
+        </div>
+      </div>
+
+      {/* اختيار عميل */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="p-3 border rounded-2xl">
+          <div className="text-xs text-gray-500 mb-1">ابحث عن عميل</div>
+          <input
+            className="border rounded-2xl p-2 w-full text-sm"
+            placeholder="الاسم أو الهاتف"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
+          <ul className="mt-2 space-y-1 max-h-72 overflow-auto text-sm">
+            {customers
+              .filter(
+                (c) =>
+                  (c["اسم الزبون"] || "").includes(q) ||
+                  (c["الهاتف"] || "").includes(q)
+              )
+              .map((c, i) => (
+                <li
+                  key={i}
+                  className={`p-2 border rounded-2xl cursor-pointer ${
+                    selected &&
+                    c["اسم الزبون"] === selected["اسم الزبون"] &&
+                    c["الهاتف"] === selected["الهاتف"]
+                      ? "bg-red-50"
+                      : ""
+                  }`}
+                  onClick={() => setSelected(c)}
+                >
+                  <div className="font-medium">{c["اسم الزبون"]}</div>
+                  <div className="text-xs text-gray-500">
+                    {c["الهاتف"] || "—"} · {c["الفرع"] || "—"}
+                  </div>
+                </li>
+              ))}
+          </ul>
+        </div>
+
+        {/* بطاقة ملخص + فلاتر تاريخ */}
+        <div className="md:col-span-2 p-3 border rounded-2xl grid md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <div className="text-xs text-gray-500">اسم الزبون</div>
+            <div className="font-semibold">{selected?.["اسم الزبون"] || "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">الهاتف</div>
+            <div className="font-semibold">{selected?.["الهاتف"] || "—"}</div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">الفرع</div>
+            <div className="font-semibold">{selected?.["الفرع"] || "—"}</div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">من تاريخ</label>
+            <input
+              type="date"
+              className="border rounded-2xl p-2 w-full"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">إلى تاريخ</label>
+            <input
+              type="date"
+              className="border rounded-2xl p-2 w-full"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+          <div className="grid content-center">
+            <div className="text-xs text-gray-500">
+              إجمالي الزيارات: <b>{summary.totalVisits}</b> · ضمن الضمان:{" "}
+              <b>{summary.warranty}</b> · خارج الضمان: <b>{summary.outWarranty}</b>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* جدول الكشف — أعمدة مرتبة “كما في الصورة” */}
+      <div className="overflow-auto">
+        <table className="w-full text-sm min-w-[1100px]">
+          <thead>
+            <tr className="text-left text-gray-500">
+              {statementPreferredCols.map((c) => (
+                <th key={c} className="py-2 pr-4">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.length === 0 && (
+              <tr>
+                <td className="py-3" colSpan={statementPreferredCols.length}>
+                  لا توجد بيانات
+                </td>
+              </tr>
+            )}
+            {filteredRows.map((r, i) => (
+              <tr key={i} className="border-t">
+                {statementPreferredCols.map((c) => (
+                  <td key={c} className="py-2 pr-4">
+                    {String(r[c] ?? "—")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ملاحظات وتواقيع (مطابقة لفكرة الكشف الورقي) */}
+      <div className="grid md:grid-cols-2 gap-4 text-sm">
+        <div className="p-3 border rounded-2xl">
+          <div className="text-xs text-gray-500 mb-1">ملاحظة عامة</div>
+          <textarea className="border rounded-2xl p-2 w-full" rows={3} placeholder="أدخل ملاحظات حول كشف العميل"></textarea>
+        </div>
+        <div className="p-3 border rounded-2xl grid grid-cols-2 gap-3">
+          <div>
+            <div className="text-xs text-gray-500">الكاونتر:</div>
+            <div className="border rounded-xl h-16"></div>
+          </div>
+          <div>
+            <div className="text-xs text-gray-500">مدير الصيانة:</div>
+            <div className="border rounded-xl h-16"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ترتيب الأعمدة كما في نموذج الكشف (يمكن تعديلها لتطابق ملفكم المحاسبي 1:1) */
+const statementPreferredCols = [
+  "اسم الزبون",
+  "الهاتف",
+  "الفرع",
+  "رقم المستند",
+  "تاريخ الحركة",
+  "نوع الخدمة",
+  "تفاصيل",
+  "حالة الضمان",
+  "تاريخ الضمان",
+  "الموظف",
+  "نتيجة الزيارة",
+  "المبلغ",
+  "ملاحظات",
+];
+
+/* داتا تجريبية قريبة من الصورة (لإظهار التفاصيل مباشرة) */
+const sampleCustomerStatementRows = [
+  {
+    "اسم الزبون": "هيا رشيد السماح",
+    "الهاتف": "935678978",
+    "الفرع": "السويدي",
+    "رقم المستند": "INV-10167",
+    "تاريخ الحركة": "2025-10-27",
+    "نوع الخدمة": "صيانة مجانية ضمن الضمان",
+    "تفاصيل": "تبديل ترانس + انتظار العميل 15 دقيقة",
+    "حالة الضمان": "ضمن الضمان",
+    "تاريخ الضمان": "2025-07-20",
+    "الموظف": "السكرتيرة مها",
+    "نتيجة الزيارة": "تم التنفيذ",
+    "المبلغ": 0,
+    "ملاحظات": "",
+  },
+  {
+    "اسم الزبون": "نبيلة يوسف يوسف",
+    "الهاتف": "935678978",
+    "الفرع": "السويدي",
+    "رقم المستند": "INV-10168",
+    "تاريخ الحركة": "2025-10-27",
+    "نوع الخدمة": "صيانة",
+    "تفاصيل": "تعبئة خزان هواء + انتظار للتجربة",
+    "حالة الضمان": "خارج الضمان",
+    "تاريخ الضمان": "",
+    "الموظف": "السكرتيرة مها",
+    "نتيجة الزيارة": "تم التنفيذ",
+    "المبلغ": 25,
+    "ملاحظات": "",
+  },
+  {
+    "اسم الزبون": "الياس كمانوئيل خدر",
+    "الهاتف": "935678978",
+    "الفرع": "السويدي",
+    "رقم المستند": "INV-10169",
+    "تاريخ الحركة": "2025-10-27",
+    "نوع الخدمة": "زيارة مالية",
+    "تفاصيل": "استلام دفعة",
+    "حالة الضمان": "—",
+    "تاريخ الضمان": "",
+    "الموظف": "السكرتيرة مها",
+    "نتيجة الزيارة": "تم التنفيذ",
+    "المبلغ": 0,
+    "ملاحظات": "",
+  },
+  {
+    "اسم الزبون": "آلاء الكوا",
+    "الهاتف": "935678978",
+    "الفرع": "السويدي",
+    "رقم المستند": "INV-10170",
+    "تاريخ الحركة": "2025-10-27",
+    "نوع الخدمة": "صيانة",
+    "تفاصيل": "فحص + تبديل مجمع والهاي براشر",
+    "حالة الضمان": "خارج الضمان",
+    "تاريخ الضمان": "",
+    "الموظف": "السكرتيرة مها",
+    "نتيجة الزيارة": "تم التنفيذ",
+    "المبلغ": 60,
+    "ملاحظات": "تأخير بسبب أعطال بالقطع",
+  },
+  {
+    "اسم الزبون": "ربيع العوض الشدود",
+    "الهاتف": "935678978",
+    "الفرع": "السويدي",
+    "رقم المستند": "INV-10171",
+    "تاريخ الحركة": "2025-10-27",
+    "نوع الخدمة": "فحص",
+    "تفاصيل": "فحص الجهاز + عرض استبدال",
+    "حالة الضمان": "—",
+    "تاريخ الضمان": "",
+    "الموظف": "السكرتيرة مها",
+    "نتيجة الزيارة": "مهتم لاحقًا",
+    "المبلغ": 0,
+    "ملاحظات": "",
+  },
+];
+
+/* أداة تاريخ مبسطة لاستخدامها في الفلاتر */
+function normalizeDateLoose(val: any): string {
+  if (!val) return "1970-01-01";
+  if (typeof val === "number") {
+    const d = new Date((val - 25569) * 86400 * 1000);
+    return toYMD(d);
+  }
+  if (typeof val === "string") {
+    const t = val.replace(/\./g, "/").replace(/-/g, "/");
+    const d = new Date(t);
+    if (!isNaN(d.getTime())) return toYMD(d);
+  }
+  return "1970-01-01";
+}
+function toYMD(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
 function Sales_Department() {
   const [tab, setTab] = useState<"inbox" | "handoffs" | "agents" | "schedule" | "technicians" >("inbox");
   const [filter, setFilter] = useState("");
@@ -2528,3 +2894,917 @@ export default function App() {
     </div>
   );
 }
+
+
+
+/** لوحة متابعة الفنيين — للريسبشن (نسخة موسعة حسب النموذج المرسل)
+ * - رفع ملف إكسل متعدد الشيتات (الصيانة/التركيب/الوقود/المهام...)
+ * - اختيار اسم الفني ⇒ يظهر له ملف فني منسّق (كل الجداول).
+ * - تعتمد على أسماء أعمدة عربية/إنجليزية شائعة، وتلتقط الورقة (_sheet/sheetName) تلقائيًا.
+ */
+
+
+
+/** بيانات تجريبية مطابقة للنموذج — نفس الأعمدة العربية */
+const SAMPLE_SHEETS: Record<string, any[]> = {
+  "رأس اليوم": [
+    { "اسم الفني": "يزن طقطق", "التاريخ": "2025-11-05", "الخروج": "10:10", "العودة": "09:45" },
+  ],
+  "الوقود": [
+    { "اسم الفني": "يزن طقطق", "التاريخ": "2025-10-28", "العداد عند التعبئة": 181981, "عداد التعبئة الثانية": 182238 },
+    { "اسم الفني": "يزن طقطق", "التاريخ": "2025-11-04", "رقم السيارة": "497380", "اللوحة": "س ع ل 1234", "العداد السابق": 182238, "العداد الحالي": 182289, "المسافة المقطوعة": 51, "invoiceNo": "INV-7789", "liters": 35, "amountSAR": 92, "receptionist": "أميرة" },
+  ],
+  "صيانات": [
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"ربيع العوض الشدود","شرح الصيانة":"تم فحص الجهاز + يجب تبديل الحشوات + تم عرض استبدال","النقاط":1,"وقت الدخول":"10:30","وقت الخروج":"11:15","am/pm":"am","الحالة":"done" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"دويلعة","اسم الزبون":"هيا رشيد السماح","شرح الصيانة":"تبديل الترنس + انتظار العميل 15 دقيقة","النقاط":1,"وقت الدخول":"11:30","وقت الخروج":"11:55","am/pm":"am","الحالة":"done" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"الطبالة","اسم الزبون":"نبيلة يوسف يوسف","شرح الصيانة":"تعبئة خزان هواء + انتظار قليل","النقاط":1,"وقت الدخول":"12:20","وقت الخروج":"12:45","am/pm":"am","الحالة":"done" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"الياس كمانوئيل خدر","شرح الصيانة":"احضار دفعة","النقاط":0.5,"وقت الدخول":"13:25","وقت الخروج":"13:35","am/pm":"pm","الحالة":"done" },
+
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"—","شرح الصيانة":"موعد يناسب السبت صباحًا أو 6 مساءً","الحالة":"postponed","تأجيل_إلى":"2025-11-08","سبب عدم التنفيذ":"حصراً السبت صباحاً أو 6 مساء" },
+
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"دويلعة","اسم الزبون":"—","الحالة":"لا يرد","سبب عدم التنفيذ":"لم يرد على الاتصالات" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"الطبالة","اسم الزبون":"—","الحالة":"لا يرد","سبب عدم التنفيذ":"انشغال الرقم" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"—","الحالة":"لا يرد","سبب عدم التنفيذ":"إغلاق الهاتف" },
+
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"—","الحالة":"غير منفذة","سبب عدم التنفيذ":"تركيب أجهزة في الطريق" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"الطبالة","اسم الزبون":"—","الحالة":"غير منفذة","سبب عدم التنفيذ":"بسبب تركيب أجهزة" },
+
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"شبعا","اسم الزبون":"آلاء الكوا","شرح الصيانة":"فحص الجهاز + تبديل المجمع والهاي براشر (تأخير بسبب أعطال قطع)","النقاط":1,"وقت الدخول":"16:25","وقت الخروج":"17:30","am/pm":"pm","الحالة":"done" },
+
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"دويلعة","اسم الزبون":"شذى بركيل","الحالة":"postponed","المشكلة":"غداً بعد الساعة 6 مساء" },
+  ],
+  "تركيب الفني": [
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"يعقوب هرموش","الجهاز":"فلتر 6 مراحل","النقاط":2,"وقت الدخول":"02:30","وقت الخروج":"03:10","am/pm":"am","الحالة":"done" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"رغد سعد الدين","الجهاز":"فلتر 7 مراحل","النقاط":2,"وقت الدخول":"07:00","وقت الخروج":"08:10","am/pm":"pm","الحالة":"done" },
+    { "اسم الفني":"يزن طقطق","التاريخ":"2025-11-05","المنطقة":"جرمانا","اسم الزبون":"محمد حسنو","الجهاز":"فلتر 6 مراحل + تسليم إبريق كهربائي","النقاط":2,"وقت الدخول":"08:50","وقت الخروج":"09:45","am/pm":"pm","الحالة":"done" },
+  ],
+  "مهام أخرى": [
+    { "اسم الفني":"يزن طقطق","الرقم":1,"المنطقة":"جرمانا","الدخول":"03:35","الخروج":"03:55","المهمة":"الذهاب إلى الشركة لتسليم مصاري","التاريخ":"2025-11-05" },
+    { "اسم الفني":"يزن طقطق","الرقم":2,"المنطقة":"شبعا - جرمانا","الدخول":"02:00","الخروج":"02:30","المهمة":"الذهاب لطريق شبعا للعميلة آلاء الكوا ثم للأستاذ علي عساف لتركيب جهاز","التاريخ":"2025-11-05" },
+  ],
+};
+
+/** لوحة متابعة الفنيين — للريسبشن (مطابقة للنموذج + محمّلة بالداتا) */
+function ReceptionTechniciansPanel() {
+  // نحمّل الداتا التجريبية افتراضيًا
+  const [sheets, setSheets] = useState<Record<string, any[]>>(SAMPLE_SHEETS);
+  const [tech, setTech] = useState<string>("يزن طقطق");
+  const [dateFrom, setDateFrom] = useState("2025-11-01");
+  const [dateTo, setDateTo] = useState("2025-11-30");
+
+  // استيراد جميع الشيتات من ملف إكسل واحد (اختياري لاستبدال الداتا)
+  const importAll = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls";
+    input.onchange = async (e: any) => {
+      const f = e.target.files?.[0];
+      if (!f) return;
+      try {
+        const XLSX = await import("xlsx");
+        const data = await f.arrayBuffer();
+        const wb = XLSX.read(data, { type: "array" });
+        const out: Record<string, any[]> = {};
+        wb.SheetNames.forEach((name: string) => {
+          const ws = wb.Sheets[name];
+          const rows = XLSX.utils.sheet_to_json<any>(ws);
+          rows.forEach((r: any) => (r._sheet = name)); // احتفظ باسم الشيت
+          out[name] = rows;
+        });
+        setSheets(out);
+        alert(`تم استيراد ${Object.keys(out).length} ورقة`);
+      } catch (err) {
+        console.error(err);
+        alert("تعذر قراءة الملف");
+      }
+    };
+    input.click();
+  };
+
+  // جميع الصفوف + فلاتر (الاسم + المدى الزمني)
+  const allRows = useMemo(() => {
+    const a: any[] = [];
+    Object.entries(sheets).forEach(([name, rows]) =>
+      (rows as any[]).forEach((r) => a.push({ ...r, _sheet: r._sheet || name }))
+    );
+    return a;
+  }, [sheets]);
+
+  const technicians = useMemo(() => {
+    const s = new Set<string>();
+    allRows.forEach((r) => {
+      const t = r.tech || r.technician || r.الفني || r["اسم الفني"] || r.اسم_الفني;
+      if (t) s.add(String(t));
+    });
+    return Array.from(s);
+  }, [allRows]);
+
+  const filtered = useMemo(() => {
+    return allRows.filter((r) => {
+      const t = r.tech || r.technician || r.الفني || r["اسم الفني"] || r.اسم_الفني;
+      if (tech && String(t || "").trim() !== tech.trim()) return false;
+      const dStr = normalizeDateLoose(r.date || r.Date || r.التاريخ || r.اليوم || r.زيارة || r.تاريخ);
+      if (dateFrom && dStr < dateFrom) return false;
+      if (dateTo && dStr > dateTo) return false;
+      return true;
+    });
+  }, [allRows, tech, dateFrom, dateTo]);
+
+  // تقسيم حسب نوع الشيت/الأعمدة
+  const fuelRows = useMemo(
+    () =>
+      filtered.filter(
+        (r) =>
+          "kmBefore" in r ||
+          "invoiceNo" in r ||
+          r.نوع === "وقود" ||
+          /fuel|وقود|بنزين|الوقود/i.test(r._sheet || "")
+      ),
+    [filtered]
+  );
+
+  const maintRows = useMemo(
+    () =>
+      filtered.filter((r) => {
+        const typ = String(r.type || r.النوع || r.الفئة || "").toLowerCase();
+        return typ.includes("صيانة") || /صيان|maint/i.test(typ) || /صيانات?/i.test(r._sheet || "");
+      }),
+    [filtered]
+  );
+
+  const instRows = useMemo(
+    () =>
+      filtered.filter((r) => {
+        const typ = String(r.type || r.النوع || r.الفئة || "").toLowerCase();
+        return typ.includes("ركب") || typ.includes("install") || /تركيب|تراكيب|install/i.test(r._sheet || "");
+      }),
+    [filtered]
+  );
+
+  // حالات خاصة
+  const executedMaint = useMemo(
+    () =>
+      maintRows.filter((r) => {
+        const st = String(r.status || r.الحالة || "").toLowerCase();
+        // "done" أو وجود شرح الصيانة مع دخول/خروج
+        return /done|منفذ|منته/.test(st) || r["شرح الصيانة"] || (r["وقت الدخول"] && r["وقت الخروج"]);
+      }),
+    [maintRows]
+  );
+
+  const cancelMaint = useMemo(() => {
+    return maintRows.filter((r) => {
+      const st = String(r.status || r.الحالة || "").toLowerCase();
+      return /cancel|ملغ/.test(st);
+    });
+  }, [maintRows]);
+
+  const postMaint = useMemo(() => {
+    return maintRows.filter((r) => {
+      const st = String(r.status || r.الحالة || "").toLowerCase();
+      return /postpon|أجل|مؤجل/.test(st);
+    });
+  }, [maintRows]);
+
+  // بطاقة رأس
+  const headerCard = useMemo(() => {
+    const getLast = (keys: string[]) =>
+      [...filtered]
+        .reverse()
+        .map((r) => keys.map((k) => r[k]).find((v) => v !== undefined && v !== null))
+        .find((v) => v);
+
+    const techName = tech || (getLast(["اسم الفني", "الفني", "tech"]) as string) || "—";
+    const dateVal = normalizeDateLoose(getLast(["التاريخ", "date", "Date"]) || "—");
+    const exitVal = getLast(["الخروج", "وقت الخروج", "exit"]) || "—";
+    const backVal = getLast(["العودة", "return"]) || "—";
+    return { techName, dateVal, exitVal, backVal };
+  }, [filtered, tech]);
+
+  // جدول العدادات/البنزين
+  const odometerRows = useMemo(() => {
+    const rows: any[] = [];
+    const pick = (r: any, arr: string[]) => arr.map((k) => r[k]).find((v) => v !== undefined && v !== null);
+
+    (fuelRows.length ? fuelRows : filtered).forEach((r) => {
+      const prev = Number(pick(r, ["العداد السابق", "kmBefore", "previousOdo", "odometerPrev"]) || 0);
+      const cur = Number(pick(r, ["العداد الحالي", "kmAfter", "odometerNow", "currentOdo"]) || 0);
+      const traveled = pick(r, ["المسافة المقطوعة", "distance", "kmTraveled"]);
+      rows.push({
+        "العداد عند التعبئة": pick(r, ["العداد عند التعبئة", "firstRefuel", "kmRefuel1"]),
+        "عداد التعبئة الثانية": pick(r, ["عداد التعبئة الثانية", "secondRefuel", "kmRefuel2"]),
+        "المسافة المقطوعة": traveled ?? (cur && prev ? cur - prev : undefined),
+        "رقم السيارة": pick(r, ["رقم السيارة", "carNo", "plate"]),
+        "العداد السابق": prev || undefined,
+        "العداد الحالي": cur || undefined,
+        "المسافة المقطوعة ": traveled ?? (cur && prev ? cur - prev : undefined),
+        "التاريخ": normalizeDateLoose(pick(r, ["التاريخ", "date", "Date"])),
+      });
+    });
+    return rows;
+  }, [fuelRows, filtered]);
+
+  // صِيَانات حسب المناطق
+  const maintByAreaRows = useMemo(() => {
+    const areaMap: Record<
+      string,
+      { total: number; done: number; postponed: number; noAnswer: number; cancelled: number; notExecuted: number; reason: string[] }
+    > = {};
+    maintRows.forEach((r) => {
+      const area = r["المنطقة"] || r.area || r.الحي || "—";
+      const st = String(r["الحالة"] || r.status || "").toLowerCase();
+      const reason = r["سبب عدم التنفيذ"] || r.reason || r["السبب"] || r.cancelReason || "";
+      areaMap[area] = areaMap[area] || { total: 0, done: 0, postponed: 0, noAnswer: 0, cancelled: 0, notExecuted: 0, reason: [] };
+      areaMap[area].total++;
+      if (/done|منفذ|منته/.test(st)) areaMap[area].done++;
+      else if (/postpon|أجل|مؤجل/.test(st)) areaMap[area].postponed++;
+      else if (/cancel|ملغ/.test(st)) areaMap[area].cancelled++;
+      else if (/لا يرد/.test(st)) areaMap[area].noAnswer++;
+      else areaMap[area].notExecuted++;
+      if (reason) areaMap[area].reason.push(String(reason));
+    });
+
+    const rows = Object.entries(areaMap).map(([area, v], i) => ({
+      "الرقم": i + 1,
+      "المنطقة": area,
+      "اجمالي": v.total,
+      "منفذة": v.done,
+      "مؤجلة": v.postponed,
+      "لا يرد": v.noAnswer,
+      "ملغية": v.cancelled,
+      "غير منفذة": v.notExecuted,
+      "سبب عدم التنفيذ": v.reason.join(" ؛ ") || "—",
+    }));
+    return rows;
+  }, [maintRows]);
+
+  // تفاصيل الصيانات المنفذة
+  const maintExecutedRows = useMemo(() => {
+    const rows = executedMaint.map((r: any, i: number) => ({
+      "الرقم": r["الرقم"] || i + 1,
+      "اسم الزبون": r["اسم الزبون"] || r.customer || "—",
+      "المنطقة": r["المنطقة"] || r.area || "—",
+      "شرح الصيانة": r["شرح الصيانة"] || r.detail || "—",
+      "النقاط": r["النقاط"] ?? r.points ?? "—",
+      "وقت الدخول": r["وقت الدخول"] || r.entry || "—",
+      "وقت الخروج": r["وقت الخروج"] || r.exit || "—",
+      "am/pm": r["am/pm"] || r.ampm || "—",
+      "التاريخ": normalizeDateLoose(r["التاريخ"] || r.date || r.Date),
+    }));
+    return rows;
+  }, [executedMaint]);
+
+  // تركيب الفني
+  const installRows = useMemo(() => {
+    const rows = instRows.map((r: any, i: number) => ({
+      "الرقم": r["الرقم"] || i + 1,
+      "اسم الزبون": r["اسم الزبون"] || r.customer || "—",
+      "المنطقة": r["المنطقة"] || r.area || "—",
+      "الجهاز": r["الجهاز"] || r.device || "—",
+      "النقاط": r["النقاط"] ?? r.points ?? "—",
+      "وقت الدخول": r["وقت الدخول"] || r.entry || "—",
+      "وقت الخروج": r["وقت الخروج"] || r.exit || "—",
+      "am/pm": r["am/pm"] || r.ampm || "—",
+      "التاريخ": normalizeDateLoose(r["التاريخ"] || r.date || r.Date),
+    }));
+    return rows;
+  }, [instRows]);
+
+  // الملغية/المؤجلة
+  const cancelledRows = useMemo(() => {
+    const rows = cancelMaint.map((r: any, i: number) => ({
+      "الرقم": r["الرقم"] || i + 1,
+      "اسم الزبون": r["اسم الزبون"] || r.customer || "—",
+      "المنطقة": r["المنطقة"] || r.area || "—",
+      "المشكلة": r["المشكلة"] || r.problem || r.reason || "—",
+      "التاريخ": normalizeDateLoose(r["التاريخ"] || r.date || r.Date),
+    }));
+    return rows;
+  }, [cancelMaint]);
+
+  const postponedRows = useMemo(() => {
+    const rows = postMaint.map((r: any, i: number) => ({
+      "الرقم": r["الرقم"] || i + 1,
+      "اسم الزبون": r["اسم الزبون"] || r.customer || "—",
+      "المنطقة": r["المنطقة"] || r.area || "—",
+      "المشكلة": r["المشكلة"] || r.problem || r.reason || "—",
+      "التاريخ": normalizeDateLoose(r["التاريخ"] || r.date || r.Date),
+    }));
+    return rows;
+  }, [postMaint]);
+
+  // ملخص تراكيب — أقساط — المواعيد — النقاط
+  const tkmSummary = useMemo(() => {
+    let jumbo = 0, energy = 0, filter = 0, kettle = 0, total = 0, done = 0, points = 0;
+    installRows.forEach((r) => {
+      const dev = String(r["الجهاز"] || "").toLowerCase();
+      if (/جامبو/.test(dev)) jumbo++;
+      if (/طاقة/.test(dev)) energy++;
+      if (/فلتر/.test(dev)) filter++;
+      if (/ابريق|أبريق|غلاية|كيتل/.test(dev)) kettle++;
+      total++;
+      points += Number(r["النقاط"] || 0) || 0;
+      if (r["وقت الدخول"] && r["وقت الخروج"]) done++;
+    });
+    return { jumbo, energy, filter, kettle, total, done, points };
+  }, [installRows]);
+
+  // مهام أخرى
+  const otherTasksRows = useMemo(() => {
+    const rows = filtered.filter(
+      (r) => r["المهمة"] || r.task || /task|مهام/i.test(r._sheet || "")
+    );
+    return rows.map((r: any, i: number) => ({
+      "الرقم": r["الرقم"] || i + 1,
+      "المنطقة": r["المنطقة"] || r.area || "—",
+      "الدخول": r["الدخول"] || r.entry || "—",
+      "الخروج": r["الخروج"] || r.exit || "—",
+      "المهمة": r["المهمة"] || r.task || "—",
+    }));
+  }, [filtered]);
+
+  // أحقية التعبئة من آخر صف للعداد/بنزين (≥ 250 كم)
+  const eligible = useMemo(() => {
+    const last = odometerRows[odometerRows.length - 1];
+    const km = Number(last?.["المسافة المقطوعة"] ?? last?.["المسافة المقطوعة "]);
+    return km >= 250;
+  }, [odometerRows]);
+
+  return (
+    <div className="space-y-4">
+      {/* شريط أدوات */}
+      <div className="p-4 border rounded-2xl bg-white grid md:grid-cols-3 gap-3">
+        <div className="md:col-span-1">
+          <h3 className="font-semibold mb-2">متابعة الفنيين</h3>
+          <div className="flex gap-2">
+            <button className="border rounded-2xl px-3 py-2 text-sm" onClick={importAll}>
+              استيراد ملف (كل الشيتات)
+            </button>
+            <button className="border rounded-2xl px-3 py-2 text-sm" onClick={()=>{ setSheets(SAMPLE_SHEETS); setTech("يزن طقطق"); setDateFrom("2025-11-01"); setDateTo("2025-11-30"); }}>
+              تحميل الداتا التجريبية
+            </button>
+          </div>
+          <div className="text-xs text-gray-500 mt-2">الأوراق: {Object.keys(sheets).length || 0}</div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs text-gray-500">اسم الفني</label>
+          <select className="border rounded-2xl p-2 text-sm w-full" value={tech} onChange={(e) => setTech(e.target.value)}>
+            <option value="">— اختر فني —</option>
+            {technicians.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">من تاريخ</label>
+            <input type="date" className="border rounded-2xl p-2 text-sm w-full" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">إلى تاريخ</label>
+            <input type="date" className="border rounded-2xl p-2 text-sm w-full" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+          </div>
+        </div>
+      </div>
+
+      {/* بطاقة رأس */}
+      <div className="p-4 border rounded-2xl bg-white grid md:grid-cols-4 gap-3 text-sm">
+        <div><div className="text-xs text-gray-500">اسم الفني</div><div className="font-medium">{headerCard.techName}</div></div>
+        <div><div className="text-xs text-gray-500">التاريخ</div><div className="font-medium">{headerCard.dateVal}</div></div>
+        <div><div className="text-xs text-gray-500">الخروج</div><div className="font-medium">{headerCard.exitVal}</div></div>
+        <div><div className="text-xs text-gray-500">العودة</div><div className="font-medium">{headerCard.backVal}</div></div>
+      </div>
+
+      {/* الوقود/العدادات */}
+      <div className="p-4 border rounded-2xl bg-white">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="font-semibold">استهلاك البنزين / العدادات</h4>
+          <span className={`text-xs px-3 py-1 rounded-2xl ${eligible ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
+            {eligible ? "يحق له التعبئة (≥ 250 كم)" : "لم يصل إلى 250 كم بعد"}
+          </span>
+        </div>
+        <RxTable
+          rows={odometerRows}
+          preferred={[
+            "العداد عند التعبئة",
+            "عداد التعبئة الثانية",
+            "المسافة المقطوعة",
+            "رقم السيارة",
+            "العداد السابق",
+            "العداد الحالي",
+            "المسافة المقطوعة ",
+            "التاريخ",
+          ]}
+        />
+      </div>
+
+      {/* صيانات (ملخص مناطق) */}
+      <div className="p-4 border rounded-2xl bg-white">
+        <h4 className="font-semibold mb-2">صيانات</h4>
+        <RxTable
+          rows={maintByAreaRows}
+          preferred={[
+            "الرقم",
+            "المنطقة",
+            "اجمالي",
+            "منفذة",
+            "مؤجلة",
+            "لا يرد",
+            "ملغية",
+            "غير منفذة",
+            "سبب عدم التنفيذ",
+          ]}
+        />
+      </div>
+
+      {/* تفاصيل الصيانات المنفذة */}
+      <div className="p-4 border rounded-2xl bg-white">
+        <h4 className="font-semibold mb-2">تفاصيل الصيانات المنفذة</h4>
+        <RxTable
+          rows={maintExecutedRows}
+          preferred={[
+            "الرقم",
+            "اسم الزبون",
+            "المنطقة",
+            "شرح الصيانة",
+            "النقاط",
+            "وقت الدخول",
+            "وقت الخروج",
+            "am/pm",
+            "التاريخ",
+          ]}
+        />
+        <div className="text-xs text-gray-600 mt-2">المجموعة: {maintExecutedRows.length}</div>
+      </div>
+
+      {/* تركيب الفني */}
+      <div className="p-4 border rounded-2xl bg-white">
+        <h4 className="font-semibold mb-2">تركيب الفني</h4>
+        <RxTable
+          rows={installRows}
+          preferred={[
+            "الرقم",
+            "اسم الزبون",
+            "المنطقة",
+            "الجهاز",
+            "النقاط",
+            "وقت الدخول",
+            "وقت الخروج",
+            "am/pm",
+            "التاريخ",
+          ]}
+        />
+        <div className="text-xs text-gray-600 mt-2">المجموع: {installRows.length}</div>
+      </div>
+
+      {/* الملغية/المؤجلة */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="p-4 border rounded-2xl bg-white">
+          <h4 className="font-semibold mb-2">تفاصيل الصيانات الملغية</h4>
+          <RxTable
+            rows={cancelledRows}
+            preferred={[
+              "الرقم",
+              "اسم الزبون",
+              "المنطقة",
+              "المشكلة",
+              "التاريخ",
+            ]}
+          />
+        </div>
+        <div className="p-4 border rounded-2xl bg-white">
+          <h4 className="font-semibold mb-2">تفاصيل الصيانات المؤجلة</h4>
+          <RxTable
+            rows={postponedRows}
+            preferred={[
+              "الرقم",
+              "اسم الزبون",
+              "المنطقة",
+              "المشكلة",
+              "التاريخ",
+            ]}
+          />
+        </div>
+      </div>
+
+      {/* تراكيب — أقساط — المواعيد — مجموع النقاط */}
+      <div className="p-4 border rounded-2xl bg-white">
+        <h4 className="font-semibold mb-2">تراكيب — أقساط — المواعيد — مجموع النقاط</h4>
+        <div className="overflow-auto">
+          <table className="w-full text-sm min-w-[700px]">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="py-2">جامبو</th>
+                <th className="py-2">طاقة</th>
+                <th className="py-2">فلتر</th>
+                <th className="py-2">ابريق</th>
+                <th className="py-2">اجمالي</th>
+                <th className="py-2">منفذة</th>
+                <th className="py-2">المواعيد</th>
+                <th className="py-2">مجموع النقاط</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-t">
+                <td className="py-2">{tkmSummary.jumbo}</td>
+                <td className="py-2">{tkmSummary.energy}</td>
+                <td className="py-2">{tkmSummary.filter}</td>
+                <td className="py-2">{tkmSummary.kettle}</td>
+                <td className="py-2">{tkmSummary.total}</td>
+                <td className="py-2">{tkmSummary.done}</td>
+                <td className="py-2">{tkmSummary.total}</td>
+                <td className="py-2">{tkmSummary.points}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* مهام أخرى */}
+      <div className="p-4 border rounded-2xl bg-white">
+        <h4 className="font-semibold mb-2">مهام أخرى</h4>
+        <RxTable
+          rows={otherTasksRows}
+          preferred={["الرقم", "المنطقة", "الدخول", "الخروج", "المهمة"]}
+        />
+      </div>
+
+      {/* التواقيع */}
+      <div className="p-4 border rounded-2xl bg-white grid md:grid-cols-2 gap-4 text-sm">
+        <div>
+          <div className="text-xs text-gray-500">الكاونتر:</div>
+          <div className="border rounded-xl h-16"></div>
+          <div className="text-xs text-gray-500 mt-1">التوقيع:</div>
+          <div className="border rounded-xl h-10"></div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">مدير الصيانة:</div>
+          <div className="border rounded-xl h-16"></div>
+          <div className="text-xs text-gray-500 mt-1">التوقيع:</div>
+          <div className="border rounded-xl h-10"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** جدول عام محافظ على ترتيب الأعمدة المطلوبة كما هي */
+function RxTable({ rows, preferred }: { rows: any[]; preferred?: string[] }) {
+  const cols = useMemo(() => {
+    if (!rows || !rows.length) return [] as string[];
+    const keys = new Set<string>();
+    rows.forEach((r) => Object.keys(r || {}).forEach((k) => keys.add(String(k))));
+    const all = Array.from(keys);
+    const pref = preferred || [];
+    return [...pref.filter((p) => keys.has(p)), ...all.filter((k) => !pref.includes(k))];
+  }, [rows, preferred]);
+
+  if (!rows || !rows.length) return <div className="text-sm text-gray-500">لا توجد بيانات</div>;
+
+  return (
+    <div className="overflow-auto">
+      <table className="w-full text-sm min-w-[760px]">
+        <thead>
+          <tr className="text-left text-gray-500">
+            {cols.map((c) => (
+              <th key={c} className="py-2 pr-4">{c}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r: any, i: number) => (
+            <tr key={i} className="border-t">
+              {cols.map((c) => (
+                <td key={c} className="py-2 pr-4">{String(r[c] ?? "—")}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
+
+
+
+/* ————— المكوّن الخاص بالجدولة للريسبشن ————— */
+function ScheduleAssignPanel() {
+  // مخزن محلي للمواعيد الواردة من قسم آخر (يمكنك استيرادها أو إدخالها يدويًا)
+  const [incoming, setIncoming] = useState<Array<any>>(() => {
+    // نحاول تحميل من localStorage إن وجد
+    try {
+      const raw = localStorage.getItem("incomingAppointments");
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    // عينات توضيحية
+    return [
+      { id: "IN-1001", type: "maintenance", customer: "ربيع العوض", area: "دويلعة", device: "فلتر 7 مراحل", date: "2025-11-09", start: "10:30", end: "11:15", detail: "فحص فلتر + تبديل حبيبات", distanceKm: 6.5 },
+      { id: "IN-1002", type: "installation", customer: "يعقوب هرموش", area: "جرمانا", device: "فلتر 6 مراحل", date: "2025-11-09", start: "14:30", end: "15:20", detail: "تركيب فلتر", distanceKm: 8.2 },
+    ];
+  });
+  const [selectedIn, setSelectedIn] = useState<any | null>(null);
+
+  // قراءة الفنيين من ملف المتابعة rxSheets + قائمة افتراضية
+  const technicians = useMemo(() => {
+    const out = new Set<string>();
+    try {
+      const raw = localStorage.getItem("rxSheets");
+      if (raw) {
+        const sheets = JSON.parse(raw) as Record<string, any[]>;
+        Object.values(sheets || {}).forEach((rows: any) =>
+          (rows as any[]).forEach((r) => {
+            const t = r.tech || r.technician || r.الفني || r["اسم الفني"] || r.اسم_الفني;
+            if (t) out.add(String(t));
+          })
+        );
+      }
+    } catch {}
+    // fallback أسماء شائعة
+    ["فهد الحربي", "سالم الدوسري", "ناصر المطيري", "يزن طقطق"].forEach((n) => out.add(n));
+    return Array.from(out);
+  }, []);
+
+  // نموذج التعيين
+  const [form, setForm] = useState({
+    tech: "",
+    date: "",
+    start: "",
+    end: "",
+    area: "",
+    customer: "",
+    device: "",
+    type: "maintenance" as "maintenance" | "installation",
+    detail: "",
+    distanceKm: 5,
+  });
+
+  // حفظ/استرجاع قائمة الوارد
+  useEffect(() => {
+    try {
+      localStorage.setItem("incomingAppointments", JSON.stringify(incoming));
+    } catch {}
+  }, [incoming]);
+
+  // عند اختيار طلب من القائمة يعبّي النموذج
+  useEffect(() => {
+    if (!selectedIn) return;
+    setForm((f) => ({
+      ...f,
+      date: selectedIn.date || f.date,
+      start: selectedIn.start || f.start,
+      end: selectedIn.end || f.end,
+      area: selectedIn.area || f.area,
+      customer: selectedIn.customer || f.customer,
+      device: selectedIn.device || f.device,
+      type: selectedIn.type || f.type,
+      detail: selectedIn.detail || f.detail,
+      distanceKm: selectedIn.distanceKm ?? f.distanceKm,
+    }));
+  }, [selectedIn]);
+
+  // إضافة موعد وارد يدويًا (اختياري)
+  const addIncoming = () => {
+    const id = `IN-${Date.now()}`;
+    const rec = {
+      id,
+      type: form.type,
+      customer: form.customer || "زبون بدون اسم",
+      area: form.area || "—",
+      device: form.device || "—",
+      date: form.date || today(),
+      start: form.start || "09:00",
+      end: form.end || "10:00",
+      detail: form.detail || "",
+      distanceKm: Number(form.distanceKm) || 5,
+    };
+    setIncoming((prev) => [rec, ...prev]);
+    setSelectedIn(rec);
+  };
+
+  // إرسال الموعد للفني: يكتب إلى orders + يحدّث rxSheets (التقارير)
+  const dispatchToTechnician = () => {
+    if (!form.tech) return alert("اختر اسم الفني");
+    if (!form.customer || !form.area || !form.date || !form.start || !form.end) {
+      return alert("أكمل البيانات الأساسية: الزبون/المنطقة/التاريخ/الوقت");
+    }
+
+    // 1) كتابة إلى orders (قائمة أوامر التطبيق)
+    try {
+      const raw = localStorage.getItem("orders");
+      const orders: any[] = raw ? JSON.parse(raw) : [];
+      const id = selectedIn?.id || `ORD-${Date.now()}`;
+      const newOrder = {
+        id,
+        type: form.type,
+        customer: form.customer,
+        area: form.area,
+        device: form.device,
+        distanceKm: Number(form.distanceKm) || 5,
+        date: form.date,
+        start: form.start,
+        end: form.end,
+        status: "scheduled",
+        detail: form.detail,
+      };
+      const newOrders = [newOrder, ...orders];
+      localStorage.setItem("orders", JSON.stringify(newOrders));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 2) تحديث تقارير rxSheets: نضيف صف للـ "صيانات" أو "تركيب الفني"
+    try {
+      const raw = localStorage.getItem("rxSheets");
+      const sheets: Record<string, any[]> = raw ? JSON.parse(raw) : {};
+      const sheetName = form.type === "installation" ? "تركيب الفني" : "صيانات";
+      sheets[sheetName] = sheets[sheetName] || [];
+      sheets[sheetName].push({
+        "اسم الفني": form.tech,
+        "التاريخ": form.date,
+        "المنطقة": form.area,
+        "اسم الزبون": form.customer,
+        "الجهاز": form.device,
+        "شرح الصيانة": form.type === "maintenance" ? (form.detail || "—") : "—",
+        "النقاط": form.type === "installation" ? 2 : 1, // تقدير افتراضي
+        "وقت الدخول": form.start,
+        "وقت الخروج": form.end,
+        "الحالة": "scheduled",
+        "type": form.type,
+      });
+      localStorage.setItem("rxSheets", JSON.stringify(sheets));
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 3) إزالة من قائمة الوارد (إن كان من الوارد)
+    if (selectedIn) {
+      setIncoming((prev) => prev.filter((x) => x.id !== selectedIn.id));
+      setSelectedIn(null);
+    }
+
+    alert("تم إرسال الموعد للفني وتحديث التقارير.");
+    // تصفير حقول غير ضرورية
+    setForm((f) => ({ ...f, customer: "", device: "", detail: "" }));
+  };
+
+  return (
+    <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold">تقويم المواعيد / إرسال للــفني</h3>
+        <div className="text-xs text-gray-500">الوارد من قسم آخر + تعيين فني</div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {/* قائمة الوارد */}
+        <div className="md:col-span-1">
+          <div className="font-semibold mb-2">المواعيد الواردة</div>
+          <ul className="text-sm space-y-2 max-h-72 overflow-auto pr-1">
+            {incoming.length === 0 && <li className="text-gray-500">لا توجد مواعيد واردة</li>}
+            {incoming.map((it) => (
+              <li
+                key={it.id}
+                className={`p-3 border rounded-2xl cursor-pointer ${selectedIn?.id === it.id ? "bg-red-50" : ""}`}
+                onClick={() => setSelectedIn(it)}
+              >
+                <div className="font-medium">{it.date} {it.start}-{it.end} · {it.customer}</div>
+                <div className="text-xs text-gray-600">{it.type === "installation" ? "تركيب" : "صيانة"} · {it.area} · {it.device}</div>
+              </li>
+            ))}
+          </ul>
+          <button className="mt-2 w-full border rounded-2xl py-2 text-sm" onClick={addIncoming}>
+            إضافة موعد وارد يدويًا من النموذج
+          </button>
+        </div>
+
+        {/* نموذج التعيين */}
+        <div className="md:col-span-2">
+          <div className="font-semibold mb-2">بيانات الموعد + التعيين</div>
+          <div className="grid md:grid-cols-2 gap-2 text-sm">
+            <div>
+              <label className="text-xs text-gray-500">نوع الموعد</label>
+              <select
+                className="border rounded-2xl p-2 w-full"
+                value={form.type}
+                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value as any }))}
+              >
+                <option value="maintenance">صيانة</option>
+                <option value="installation">تركيب</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">الفني</label>
+              <select
+                className="border rounded-2xl p-2 w-full"
+                value={form.tech}
+                onChange={(e) => setForm((f) => ({ ...f, tech: e.target.value }))}
+              >
+                <option value="">— اختر فني —</option>
+                {technicians.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">التاريخ</label>
+              <input
+                type="date"
+                className="border rounded-2xl p-2 w-full"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs text-gray-500">بداية</label>
+                <input
+                  type="time"
+                  className="border rounded-2xl p-2 w-full"
+                  value={form.start}
+                  onChange={(e) => setForm((f) => ({ ...f, start: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500">نهاية</label>
+                <input
+                  type="time"
+                  className="border rounded-2xl p-2 w-full"
+                  value={form.end}
+                  onChange={(e) => setForm((f) => ({ ...f, end: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">الزبون</label>
+              <input
+                className="border rounded-2xl p-2 w-full"
+                value={form.customer}
+                onChange={(e) => setForm((f) => ({ ...f, customer: e.target.value }))}
+                placeholder="اسم الزبون"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">المنطقة</label>
+              <input
+                className="border rounded-2xl p-2 w-full"
+                value={form.area}
+                onChange={(e) => setForm((f) => ({ ...f, area: e.target.value }))}
+                placeholder="المنطقة / الحي"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">الجهاز</label>
+              <input
+                className="border rounded-2xl p-2 w-full"
+                value={form.device}
+                onChange={(e) => setForm((f) => ({ ...f, device: e.target.value }))}
+                placeholder="الجهاز (مثال: فلتر 7 مراحل)"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500">المسافة التقديرية (كم)</label>
+              <input
+                type="number"
+                className="border rounded-2xl p-2 w-full"
+                value={form.distanceKm}
+                onChange={(e) => setForm((f) => ({ ...f, distanceKm: Number(e.target.value) }))}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="text-xs text-gray-500">تفاصيل</label>
+              <textarea
+                className="border rounded-2xl p-2 w-full"
+                rows={3}
+                value={form.detail}
+                onChange={(e) => setForm((f) => ({ ...f, detail: e.target.value }))}
+                placeholder="مثال: فحص فلتر + كسر مرحلة حبيبات وتم تبديلها"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button className="bg-red-800 text-white rounded-2xl px-4 py-2 text-sm" onClick={dispatchToTechnician}>
+              إرسال الموعد للفني + تحديث التقارير
+            </button>
+            <button
+              className="border rounded-2xl px-4 py-2 text-sm"
+              onClick={() => {
+                setSelectedIn(null);
+                setForm({ ...form, customer: "", device: "", detail: "" });
+              }}
+            >
+              تصفير النموذج
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+function today(): string {
+  throw new Error("Function not implemented.");
+}
+
