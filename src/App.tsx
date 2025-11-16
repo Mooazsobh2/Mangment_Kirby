@@ -880,6 +880,23 @@ function AccountingPanel() {
   // نماذج بيانات وهمية سريعة
   const receiptTypes = ["صيانة", "عقد تركيب", "قسط"] as const;
   const payMethods = ["نقدي", "تحويل", "نقاط بيع", "شيك", "QR"] as const;
+const [salesMode, setSalesMode] = useState<"list" | "new">("list");
+
+const [salesInvoice, setSalesInvoice] = useState({
+  number: "",
+  customer: "",
+  deviceName: "",
+  deviceType: "",
+  date: new Date().toISOString().slice(0, 10), // تاريخ اليوم
+  total: "",
+  isInstallment: false,
+  firstPayment: "",
+  remaining: "",
+  monthlyPayment: "",
+  monthsTotal: "",
+  address: "",
+  notes: "",
+});
 
   return (
     <div className="space-y-6">
@@ -932,38 +949,339 @@ function AccountingPanel() {
       </div>
 
       {/* --- التبويبات المالية الأصلية (كما هي) --- */}
-      {tab === "sales" && (
-        <div className="grid lg:grid-cols-3 gap-4">
-          <div className="p-4 border rounded-2xl shadow-sm bg-white lg:col-span-2">
-            <h3 className="font-semibold text-red-800 mb-3">فواتير المبيعات</h3>
-            <div className="overflow-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-2">#</th>
-                    <th className="py-2">العميل</th>
-                    <th className="py-2">الوصف</th>
-                    <th className="py-2">الإجمالي</th>
-                    <th className="py-2">الحالة</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-t"><td className="py-2">INV-1001</td><td className="py-2">شركة دار الماء</td><td className="py-2">تركيب فلتر RO</td><td className="py-2">2,300</td><td className="py-2"><Badge color="yellow">غير مدفوع</Badge></td></tr>
-                  <tr className="border-t"><td className="py-2">INV-1002</td><td className="py-2">أحمد علي</td><td className="py-2">صيانة دورية</td><td className="py-2">180</td><td className="py-2"><Badge color="green">مدفوع</Badge></td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="p-4 border rounded-2xl shadow-sm bg-white">
-            <h4 className="font-semibold mb-2">إجراءات سريعة</h4>
-            <div className="space-y-2">
-              <button className="w-full rounded-2xl px-4 py-2 bg-red-800 text-white">إصدار فاتورة جديدة</button>
-              <button className="w-full rounded-2xl px-4 py-2 border">فاتورة سريعة (POS/QR)</button>
-              <button className="w-full rounded-2xl px-4 py-2 border">مسودة عرض سعر ← تحويل لفاتورة</button>
-            </div>
+{tab === "sales" && (
+  <>
+    {salesMode === "list" && (
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="p-4 border rounded-2xl shadow-sm bg-white lg:col-span-2">
+          <h3 className="font-semibold text-red-800 mb-3">فواتير المبيعات</h3>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500">
+                  <th className="py-2">#</th>
+                  <th className="py-2">العميل</th>
+                  <th className="py-2">الوصف</th>
+                  <th className="py-2">الإجمالي</th>
+                  <th className="py-2">الحالة</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t">
+                  <td className="py-2">INV-1001</td>
+                  <td className="py-2">شركة دار الماء</td>
+                  <td className="py-2">تركيب فلتر RO</td>
+                  <td className="py-2">2,300,000</td>
+                  <td className="py-2">
+                    <Badge color="yellow">غير مدفوع</Badge>
+                  </td>
+                </tr>
+                <tr className="border-t">
+                  <td className="py-2">INV-1002</td>
+                  <td className="py-2">أحمد علي</td>
+                  <td className="py-2">صيانة دورية</td>
+                  <td className="py-2">180,000</td>
+                  <td className="py-2">
+                    <Badge color="green">مدفوع</Badge>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-      )}
+
+        <div className="p-4 border rounded-2xl shadow-sm bg-white">
+          <h4 className="font-semibold mb-2">إجراءات سريعة</h4>
+          <div className="space-y-2">
+            <button
+              className="w-full rounded-2xl px-4 py-2 bg-red-800 text-white"
+              onClick={() => setSalesMode("new")}
+            >
+              إضافة فاتورة جديدة
+            </button>
+            <button className="w-full rounded-2xl px-4 py-2 border">
+              فاتورة سريعة (POS/QR)
+            </button>
+            <button className="w-full rounded-2xl px-4 py-2 border">
+              مسودة عرض سعر ← تحويل لفاتورة
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {salesMode === "new" && (
+      <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold text-red-800">إضافة فاتورة مبيعات جديدة</h3>
+          <button
+            className="text-sm px-3 py-1.5 rounded-2xl border"
+            onClick={() => setSalesMode("list")}
+          >
+            ← رجوع لقائمة الفواتير
+          </button>
+        </div>
+
+        {/* صف 1: رقم الفاتورة + اسم العميل + التاريخ */}
+        <div className="grid md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              رقم الفاتورة
+            </label>
+            <input
+              className="w-full border rounded-2xl p-2"
+              placeholder="مثال: INV-2025-010"
+              value={salesInvoice.number}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({ ...prev, number: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              اسم العميل
+            </label>
+            <input
+              className="w-full border rounded-2xl p-2"
+              placeholder="الاسم الثلاثي أو اسم الشركة"
+              value={salesInvoice.customer}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({ ...prev, customer: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              التاريخ
+            </label>
+            <input
+              type="date"
+              className="w-full border rounded-2xl p-2"
+              value={salesInvoice.date}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({ ...prev, date: e.target.value }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* صف 2: الجهاز ونوعه */}
+        <div className="grid md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              الجهاز / الوصف
+            </label>
+            <input
+              className="w-full border rounded-2xl p-2"
+              placeholder="مثال: جهاز كيربي مع يوفي 7 مراحل"
+              value={salesInvoice.deviceName}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({ ...prev, deviceName: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              نوع الجهاز
+            </label>
+            <select
+              className="w-full border rounded-2xl p-2"
+              value={salesInvoice.deviceType}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({ ...prev, deviceType: e.target.value }))
+              }
+            >
+              <option value="">اختر النوع</option>
+              <option value="kirby">أجهزة كيربي / فلاتر</option>
+              <option value="solar">طاقة شمسية</option>
+              <option value="spare">قطع غيار</option>
+              <option value="other">أخرى</option>
+            </select>
+          </div>
+        </div>
+
+        {/* صف 3: المبالغ + هل أقساط أم لا */}
+        <div className="grid md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              إجمالي الفاتورة
+            </label>
+            <input
+              type="number"
+              className="w-full border rounded-2xl p-2"
+              placeholder="مثال: 4,500,000"
+              value={salesInvoice.total}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({ ...prev, total: e.target.value }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              طريقة الدفع
+            </label>
+            <div className="flex items-center gap-3 mt-1">
+              <label className="flex items-center gap-1 text-xs">
+                <input
+                  type="radio"
+                  checked={!salesInvoice.isInstallment}
+                  onChange={() =>
+                    setSalesInvoice((prev) => ({ ...prev, isInstallment: false }))
+                  }
+                />
+                <span>دفعة كاملة</span>
+              </label>
+              <label className="flex items-center gap-1 text-xs">
+                <input
+                  type="radio"
+                  checked={salesInvoice.isInstallment}
+                  onChange={() =>
+                    setSalesInvoice((prev) => ({ ...prev, isInstallment: true }))
+                  }
+                />
+                <span>أقساط</span>
+              </label>
+            </div>
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              الدفعة الأولى
+            </label>
+            <input
+              type="number"
+              className="w-full border rounded-2xl p-2"
+              placeholder="مثال: 1,500,000"
+              value={salesInvoice.firstPayment}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({
+                  ...prev,
+                  firstPayment: e.target.value,
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* صف 4: تفاصيل الأقساط إن وُجدت */}
+        {salesInvoice.isInstallment && (
+          <div className="grid md:grid-cols-3 gap-3 text-sm">
+            <div>
+              <label className="block mb-1 font-medium text-slate-700">
+                المتبقي
+              </label>
+              <input
+                type="number"
+                className="w-full border rounded-2xl p-2"
+                placeholder="المبلغ المتبقي"
+                value={salesInvoice.remaining}
+                onChange={(e) =>
+                  setSalesInvoice((prev) => ({
+                    ...prev,
+                    remaining: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <label className="block mb-1 font-medium text-slate-700">
+                القسط الشهري
+              </label>
+              <input
+                type="number"
+                className="w-full border rounded-2xl p-2"
+                placeholder="مثال: 250,000"
+                value={salesInvoice.monthlyPayment}
+                onChange={(e) =>
+                  setSalesInvoice((prev) => ({
+                    ...prev,
+                    monthlyPayment: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div>
+              <label className="block mb-1 font-medium text-slate-700">
+                عدد الأقساط الكلي
+              </label>
+              <input
+                type="number"
+                className="w-full border rounded-2xl p-2"
+                placeholder="مثال: 12"
+                value={salesInvoice.monthsTotal}
+                onChange={(e) =>
+                  setSalesInvoice((prev) => ({
+                    ...prev,
+                    monthsTotal: e.target.value,
+                  }))
+                }
+              />
+            </div>
+          </div>
+        )}
+
+        {/* صف 5: العنوان + ملاحظات */}
+        <div className="grid md:grid-cols-2 gap-3 text-sm">
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              عنوان التركيب / التسليم
+            </label>
+            <textarea
+              className="w-full border rounded-2xl p-2"
+              rows={3}
+              placeholder="مثال: دمشق · جرمانا · شارع كذا · بناء كذا · طابق ..."
+              value={salesInvoice.address}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({
+                  ...prev,
+                  address: e.target.value,
+                }))
+              }
+            />
+          </div>
+          <div>
+            <label className="block mb-1 font-medium text-slate-700">
+              ملاحظات إضافية
+            </label>
+            <textarea
+              className="w-full border rounded-2xl p-2"
+              rows={3}
+              placeholder="مثال: معاملة خاصة / رقم هاتف إضافي / شروط العقد ..."
+              value={salesInvoice.notes}
+              onChange={(e) =>
+                setSalesInvoice((prev) => ({
+                  ...prev,
+                  notes: e.target.value,
+                }))
+              }
+            />
+          </div>
+        </div>
+
+        {/* أزرار الإرسال */}
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <button
+            className="px-4 py-2 rounded-2xl border text-sm"
+            onClick={() => setSalesMode("list")}
+          >
+            إلغاء
+          </button>
+          <button
+            className="px-4 py-2 rounded-2xl bg-red-800 text-white text-sm"
+            onClick={() => {
+              // هنا مكان الربط مع الـ API أو قاعدة البيانات لاحقاً
+              console.log("فاتورة جديدة:", salesInvoice);
+              alert("تم إرسال إيصال الفاتورة إلى الريسبشن (وهميًا).");
+              setSalesMode("list");
+            }}
+          >
+            إرسال إيصال للريسبشن
+          </button>
+        </div>
+      </div>
+    )}
+  </>
+)}
+
 
       {tab === "receivables" && (
         <div className="grid lg:grid-cols-3 gap-4">
