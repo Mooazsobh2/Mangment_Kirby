@@ -1850,8 +1850,95 @@ const CCTVPanel = () => {
  * مهام: التذاكر/الشكاوى، الاستقبال، متابعة الفنيين، الأقساط، التركيبات، البنزين/المسارات
  ***********************************/
 function ReceptionPanel() {
-  const [tab, setTab] = useState("tickets"); // tickets | schedule | technicians | installments | installs | fuel | statements
+  const [tab, setTab] = useState("tickets"); // tickets | schedule | technicians | installments | installs | fuel | statements | techReports | logs | kpis
   const [filter, setFilter] = useState("");
+
+  // بيانات وهمية جديدة للتبويبات المضافة
+  const sampleTechReports = [
+    {
+      tech: "م. خالد",
+      done: 8,
+      postponed: 1,
+      canceled: 0,
+      noAnswer: 2,
+      appointments: 11,
+      recommendations: 5,
+      installments: 3,
+      installs: 2,
+      externalTasks: 1,
+    },
+    {
+      tech: "م. سليم",
+      done: 6,
+      postponed: 2,
+      canceled: 1,
+      noAnswer: 1,
+      appointments: 10,
+      recommendations: 4,
+      installments: 1,
+      installs: 1,
+      externalTasks: 0,
+    },
+  ];
+
+  const sampleOilChanges = [
+    {
+      car: "سيارة 1",
+      plate: "س-123456",
+      lastOdo: 15000,
+      currentOdo: 20550,
+      lastDate: "2025-09-10",
+    },
+    {
+      car: "سيارة 2",
+      plate: "س-654321",
+      lastOdo: 30000,
+      currentOdo: 34200,
+      lastDate: "2025-10-01",
+    },
+  ];
+
+  const sampleMaintLogs = [
+    {
+      id: "M-1001",
+      customer: "أحمد علي",
+      type: "صيانة",
+      source: "برنامج محاسبي",
+      date: "2025-11-24",
+      status: "منجزة",
+    },
+    {
+      id: "M-1002",
+      customer: "شركة دار الماء",
+      type: "تركيب",
+      source: "إسناد من الريسبشن",
+      date: "2025-11-24",
+      status: "قيد التنفيذ",
+    },
+  ];
+
+  const receptionKpis = [
+    { label: "عدد المواعيد اليوم (مؤكد)", value: 18, note: "كل الحالات المؤكدة" },
+    { label: "عدد المواعيد المنجزة اليوم", value: 12, note: "صيانة + تركيب" },
+    { label: "المواعيد الملغاة/المؤجلة", value: 4, note: "2 ملغى · 2 مؤجل" },
+    { label: "نسبة الزبائن الذين لم يردوا", value: "15%", note: "من إجمالي الاتصالات" },
+    { label: "معدل استجابة الفنيين (ETA مقابل الفعلي)", value: "82%", note: "ضمن ±15 دقيقة" },
+    { label: "استهلاك البنزين اليوم", value: "78 لتر", note: "جميع السيارات" },
+    { label: "عدد عمليات تبديل الزيت المعتمدة هذا الشهر", value: 5, note: "" },
+    { label: "قيمة فواتير الصيانة المضافة اليوم", value: "3,250,000", note: "للسيارات والزبائن" },
+  ];
+
+  const appointmentStatuses = [
+    "الكل",
+    "مجدول",
+    "مؤكد",
+    "في الطريق",
+    "منجز",
+    "مؤجل",
+    "ملغى",
+  ];
+
+  const [scheduleStatusFilter, setScheduleStatusFilter] = useState("الكل");
 
   return (
     <div className="space-y-6">
@@ -1859,10 +1946,10 @@ function ReceptionPanel() {
         <div>
           <h2 className="text-xl font-semibold">الريسبشن</h2>
           <p className="text-sm text-red-100">
-            تسجيل صيانات/شكاوى · المواعيد · متابعة الفنيين · الأقساط · التركيبات · البنزين · كشوفات الزبائن
+            تسجيل صيانات/شكاوى · المواعيد · متابعة الفنيين · الأقساط · التركيبات · البنزين وتبديل الزيت · كشوفات الزبائن · تقارير و&nbsp;KPIs
           </p>
         </div>
-        <div className="flex gap-2 text-sm">
+        <div className="flex flex-wrap gap-2 text-sm">
           {[
             { key: "tickets", label: "التذاكر" },
             { key: "schedule", label: "المواعيد" },
@@ -1870,7 +1957,10 @@ function ReceptionPanel() {
             { key: "installments", label: "الأقساط" },
             { key: "installs", label: "التركيبات" },
             { key: "fuel", label: "البنزين/المسارات" },
-            { key: "statements", label: "كشوفات الزبائن" }, // جديد
+            { key: "statements", label: "كشوفات الزبائن" },
+            { key: "techReports", label: "تقارير الفنيين" },
+            { key: "logs", label: "سجلات الصيانة" },
+            { key: "kpis", label: "مؤشرات الأداء" },
           ].map((t) => (
             <button
               key={t.key}
@@ -1935,17 +2025,69 @@ function ReceptionPanel() {
         </div>
       )}
 
-      {tab === "schedule" && <ScheduleAssignPanel />}
+      {/* لوحة المواعيد اليوم + فلترة الحالات + تأكيد قبل 30 دقيقة (منطقي) */}
+      {tab === "schedule" && (
+        <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">لوحة مواعيد اليوم</h3>
+              <p className="text-xs text-gray-500">
+                استلام المواعيد من السكرتيرات/المبيعات · تأكيد قبل 30 دقيقة · إسناد لأقرب فني ومتابعة التنفيذ
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <select
+                className="border rounded-2xl p-2"
+                value={scheduleStatusFilter}
+                onChange={(e) => setScheduleStatusFilter(e.target.value)}
+              >
+                {appointmentStatuses.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+              <button className="px-3 py-1.5 rounded-2xl border">
+                تأكيد المواعيد قبل 30 دقيقة (وهمي)
+              </button>
+              <button className="px-3 py-1.5 rounded-2xl border">
+                إشعار العميل والفني (SMS/WhatsApp وهمي)
+              </button>
+            </div>
+          </div>
 
-      {/* متابعة الفنيين */}
-      {tab === "technicians" && <ReceptionTechniciansPanel />}
+          {/* لوحة الجدولة الأصلية */}
+          <ScheduleAssignPanel statusFilter={scheduleStatusFilter} />
+        </div>
+      )}
+
+      {/* متابعة الفنيين / لوحة الخريطة والتتبع */}
+      {tab === "technicians" && (
+        <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">لوحة تتبع الفنيين</h3>
+              <p className="text-xs text-gray-500">
+                عرض المواقع الحية · تقدير وقت الوصول (ETA) · زر "أقرب فني" · تغيير حالة الفني · مصادقة عبر QR أو GPS
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <button className="px-3 py-1.5 rounded-2xl border">إظهار أقرب فني لكل موعد</button>
+              <button className="px-3 py-1.5 rounded-2xl border">تحديث الحالات من الخريطة</button>
+              <button className="px-3 py-1.5 rounded-2xl border">مصادقة وصول (QR / GPS)</button>
+            </div>
+          </div>
+
+          <ReceptionTechniciansPanel />
+        </div>
+      )}
 
       {/* الأقساط */}
       {tab === "installments" && (
         <div className="p-4 border rounded-2xl shadow-sm bg-white">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">إدارة الأقساط</h3>
-            <div className="text-xs text-gray-500">إنذارات قرب الاستحقاق (وهمي)</div>
+            <div className="text-xs text-gray-500">
+              الربط مع برنامج Excel / المحاسبة لمتابعة الأقساط الخاصة بكل زبون
+            </div>
           </div>
           <div className="overflow-auto">
             <table className="w-full text-sm">
@@ -2001,16 +2143,26 @@ function ReceptionPanel() {
         </div>
       )}
 
-      {/* البنزين/المسارات */}
+      {/* البنزين/المسارات + تبديل الزيت */}
       {tab === "fuel" && (
         <div className="grid md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 p-4 border rounded-2xl shadow-sm bg-white">
+          {/* خريطة ومسارات + عداد بنزين لكل فني/سيارة */}
+          <div className="md:col-span-2 p-4 border rounded-2xl shadow-sm bg-white space-y-3">
             <h3 className="font-semibold mb-2">الخريطة والمسارات (وهمي)</h3>
-            <div className="h-72 border border-dashed rounded-2xl flex items-center justify-center text-gray-500 text-sm">
+            <p className="text-xs text-gray-500">
+              عداد لكل فني/سيارة · طلب تعبئة → موافقة → فاتورة تعبئة → صرف محاسب · ربط الفاتورة بسيارة محددة
+            </p>
+            <div className="h-64 border border-dashed rounded-2xl flex items-center justify-center text-gray-500 text-sm">
               مسارات اليوم حسب الفني والمسافة المقطوعة
             </div>
+            <div className="flex flex-wrap gap-2 text-sm">
+              <button className="px-3 py-1.5 rounded-2xl border">طلب تعبئة بنزين</button>
+              <button className="px-3 py-1.5 rounded-2xl border">إدخال فاتورة تعبئة وربطها بالسيارة</button>
+            </div>
           </div>
-          <div className="p-4 border rounded-2xl shadow-sm bg-white">
+
+          {/* استهلاك البنزين + بطاقات */}
+          <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-3">
             <h4 className="font-semibold mb-2">استهلاك البنزين</h4>
             <ul className="text-sm space-y-2">
               {sampleFuel.map((f) => (
@@ -2024,14 +2176,216 @@ function ReceptionPanel() {
               ))}
             </ul>
           </div>
+
+          {/* تبديل الزيت (يُعتبر جزءًا من إدارة السيارات) */}
+          <div className="md:col-span-3 p-4 border rounded-2xl shadow-sm bg-white">
+            <h4 className="font-semibold mb-2">تبديل الزيت</h4>
+            <p className="text-xs text-gray-500 mb-2">
+              الموافقة على تبديل الزيت عند تجاوز 5000 كلم من آخر تبديل عبر مقارنة العداد الحالي مع العداد السابق.
+            </p>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-2">السيارة</th>
+                    <th className="py-2">اللوحة</th>
+                    <th className="py-2">عداد آخر تبديل</th>
+                    <th className="py-2">العداد الحالي</th>
+                    <th className="py-2">كم منذ آخر تبديل</th>
+                    <th className="py-2">آخر تاريخ تبديل</th>
+                    <th className="py-2">الحالة</th>
+                    <th className="py-2">إجراء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleOilChanges.map((c) => {
+                    const diff = c.currentOdo - c.lastOdo;
+                    const canChange = diff >= 5000;
+                    return (
+                      <tr key={c.plate} className="border-t">
+                        <td className="py-2">{c.car}</td>
+                        <td className="py-2">{c.plate}</td>
+                        <td className="py-2">{c.lastOdo}</td>
+                        <td className="py-2">{c.currentOdo}</td>
+                        <td className="py-2">{diff}</td>
+                        <td className="py-2">{c.lastDate}</td>
+                        <td className="py-2">
+                          {canChange ? (
+                            <span className="text-xs px-2 py-1 rounded-full bg-red-100 text-red-700">
+                              بحاجة لتبديل
+                            </span>
+                          ) : (
+                            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
+                              ضمن المسموح
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-2">
+                          <button
+                            className="px-3 py-1.5 rounded-2xl border text-xs disabled:opacity-40"
+                            disabled={!canChange}
+                          >
+                            اعتماد تبديل الزيت
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* كشوفات الزبائن — جديد */}
+      {/* كشوفات الزبائن — تحديث كشف الزبون */}
       {tab === "statements" && <CustomerStatementsSection />}
+
+      {/* تقارير الفنيين */}
+      {tab === "techReports" && (
+        <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold">تقارير الفنيين</h3>
+            <p className="text-xs text-gray-500">
+              عدد الصيانات المنفذة/المؤجلة/الملغية · العملاء الذين لم يردوا · المواعيد والتوصيات · الأقساط · التركيبات · المهام الخارجية
+            </p>
+          </div>
+          <div className="overflow-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500">
+                  <th className="py-2">الفني</th>
+                  <th className="py-2">صيانات منجزة</th>
+                  <th className="py-2">مؤجلة</th>
+                  <th className="py-2">ملغاة</th>
+                  <th className="py-2">زبائن لم يردوا</th>
+                  <th className="py-2">عدد المواعيد</th>
+                  <th className="py-2">عدد التوصيات</th>
+                  <th className="py-2">أقساط مرتبطة</th>
+                  <th className="py-2">تراكيب منفذة</th>
+                  <th className="py-2">مهام خارجية</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sampleTechReports.map((t) => (
+                  <tr key={t.tech} className="border-t">
+                    <td className="py-2">{t.tech}</td>
+                    <td className="py-2">{t.done}</td>
+                    <td className="py-2">{t.postponed}</td>
+                    <td className="py-2">{t.canceled}</td>
+                    <td className="py-2">{t.noAnswer}</td>
+                    <td className="py-2">{t.appointments}</td>
+                    <td className="py-2">{t.recommendations}</td>
+                    <td className="py-2">{t.installments}</td>
+                    <td className="py-2">{t.installs}</td>
+                    <td className="py-2">{t.externalTasks}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* صيانة وكشوف الفنيين (Maintenance & Logs) */}
+      {tab === "logs" && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="md:col-span-2 p-4 border rounded-2xl shadow-sm bg-white">
+            <h3 className="font-semibold mb-2">سجلات الصيانة اليومية</h3>
+            <p className="text-xs text-gray-500 mb-2">
+              عرض الصيانات المسجلة اليوم/الأمس من البرنامج المحاسبي · تنفيذ الإيصالات · متابعة التراكيب والأقساط · مراجعة الصيانة المنفذة
+            </p>
+            <div className="overflow-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-2">#</th>
+                    <th className="py-2">العميل</th>
+                    <th className="py-2">نوع العملية</th>
+                    <th className="py-2">المصدر</th>
+                    <th className="py-2">التاريخ</th>
+                    <th className="py-2">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sampleMaintLogs.map((m) => (
+                    <tr key={m.id} className="border-t">
+                      <td className="py-2">{m.id}</td>
+                      <td className="py-2">{m.customer}</td>
+                      <td className="py-2">{m.type}</td>
+                      <td className="py-2">{m.source}</td>
+                      <td className="py-2">{m.date}</td>
+                      <td className="py-2">{m.status}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="p-4 border rounded-2xl shadow-sm bg-white space-y-4 text-sm">
+            <div>
+              <h4 className="font-semibold mb-1">تقرير قطع مجانية</h4>
+              <p className="text-xs text-gray-500 mb-1">
+                كتابة تقرير بالقطع المجانية التي تم تبديلها من قبل الفني لإرساله للمستودع.
+              </p>
+              <textarea className="border rounded-2xl p-2 w-full" rows={3} placeholder="اكتب رقم التذكرة + القطع المجانية + الفني..." />
+              <button className="mt-2 px-3 py-1.5 rounded-2xl border w-full">
+                حفظ وإرسال للمستودع (وهمي)
+              </button>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-1">متابعة الملفات الصحية / عقود الصيانة</h4>
+              <p className="text-xs text-gray-500 mb-1">
+                متابعة الإكمال عبر Excel أو نظام العقود.
+              </p>
+              <button className="px-3 py-1.5 rounded-2xl border w-full">
+                استيراد ملف Excel (وهمي)
+              </button>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-1">فواتير صيانة السيارات</h4>
+              <p className="text-xs text-gray-500 mb-1">
+                إضافة فواتير صيانة السيارات وربطها بالزبون والفني.
+              </p>
+              <input className="border rounded-2xl p-2 w-full mb-1" placeholder="رقم الفاتورة" />
+              <input className="border rounded-2xl p-2 w-full mb-1" placeholder="اسم الزبون / الجهة" />
+              <input className="border rounded-2xl p-2 w-full mb-1" placeholder="اسم الفني" />
+              <input className="border rounded-2xl p-2 w-full mb-1" placeholder="القيمة" />
+              <button className="px-3 py-1.5 rounded-2xl border w-full">
+                حفظ الفاتورة وربطها
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* مؤشرات الريسبشن (KPIs) */}
+      {tab === "kpis" && (
+        <div className="p-4 border rounded-2xl shadow-sm bg-white">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold">مؤشرات أداء الريسبشن (KPIs)</h3>
+            <p className="text-xs text-gray-500">
+              متابعة جودة العمل اليومي للمواعيد، الفنيين، البنزين، الصيانة، وتبديل الزيت.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-3 text-sm">
+            {receptionKpis.map((k) => (
+              <div key={k.label} className="p-3 border rounded-2xl">
+                <div className="text-xs text-gray-500 mb-1">{k.label}</div>
+                <div className="text-xl font-semibold mb-1">{k.value}</div>
+                {k.note && <div className="text-xs text-gray-500">{k.note}</div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 /* ===================== قسم كشوفات الزبائن ===================== */
 
