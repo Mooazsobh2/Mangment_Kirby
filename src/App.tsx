@@ -1263,165 +1263,189 @@ function AccountingPanel() {
 // Warehouse Panel (مستودع) — Wireframe متكامل حسب السيناريو
 // ----------------------
 const WarehousePanel = () => {
-  const [tab, setTab] = useState<"stock"|"technicians"|"recycled"|"alerts"|"purchases"|"archive">("stock");
+  const [tab, setTab] = useState<"stock"|"tech_requests"|"recycled"|"alerts"|"purchases"|"archive">("stock");
 
-  // بيانات وهمية محلية لتجنّب تعارض الأسماء مع المستند
+  // --- النماذج ---
   type Item = { sku:string; name:string; category:string; uom:string; barcode:string; min:number; qty:number; bin:string; price:number };
   type Tech = { id:string; name:string };
-  type TechStock = { techId:string; items: Record<string, number> }; // sku -> qty
-  type ConsumeEvent = { id:string; techId:string; sku:string; qty:number; date:string };
+
+  // أضفنا action (تسليم/تبديل) + note اختياري
+  type TechReqLine = {
+    sku:string; name:string; uom:string;
+    requested:number; fulfilled:number;
+    action:"تسليم"|"تبديل"; note?:string
+  };
+
+  type TechRequest = { id:string; techId:string; date:string; status:"open"|"completed"; lines:TechReqLine[] };
   type RecyclePart = { id:string; sku:string; name:string; state:"needs_repair"|"refurbished"; employeeFactor:number; note?:string };
   type PurchaseItem = { sku:string; name:string; qty:number };
   type PurchaseReq = { id:string; date:string; items:PurchaseItem[]; status:"draft"|"sent_manager"|"approved"|"sent_accounting"|"rejected" };
   type Log = { t:string; msg:string };
 
+  // --- بيانات أساسية ---
   const [items, setItems] = useState<Item[]>([
-    { sku:"FL-10-RO", name:"فلتر 10\" RO", category:"فلاتر", uom:"قطعة", barcode:"100001", min:10, qty:22, bin:"A1", price:45 },
-    { sku:"TK-RO-4G", name:"خزان RO 4G", category:"خزانات", uom:"قطعة", barcode:"100045", min:5, qty:6, bin:"B3", price:160 },
-    { sku:"PM-CARB", name:"حشوة كربونية", category:"مستهلكات", uom:"قطعة", barcode:"100077", min:30, qty:28, bin:"C2", price:18 },
-    { sku:"PMP-RO", name:"مضخة RO", category:"مضخات", uom:"قطعة", barcode:"100099", min:3, qty:4, bin:"D1", price:280 },
+    { sku:"FL-10-RO", name:"فلتر 10\" RO", category:"فلاتر",   uom:"قطعة", barcode:"100001", min:10, qty:22, bin:"A1", price:45 },
+    { sku:"TK-RO-4G", name:"خزان RO 4G",   category:"خزانات", uom:"قطعة", barcode:"100045", min:5,  qty:6,  bin:"B3", price:160 },
+    { sku:"PM-CARB",  name:"حشوة كربونية", category:"مستهلكات", uom:"قطعة", barcode:"100077", min:30, qty:28, bin:"C2", price:18 },
+    { sku:"PMP-RO",   name:"مضخة RO",      category:"مضخات",  uom:"قطعة", barcode:"100099", min:3,  qty:4,  bin:"D1", price:280 },
   ]);
 
   const [techs] = useState<Tech[]>([
     { id:"T-1", name:"م. خالد" }, { id:"T-2", name:"م. سليم" }, { id:"T-3", name:"م. نورة" },
   ]);
 
-  // مخزون يد الفنيين
-  const [techStocks, setTechStocks] = useState<TechStock[]>([
-    { techId:"T-1", items: { "FL-10-RO":3, "TK-RO-4G":1, "PM-CARB":6 } },
-    { techId:"T-2", items: { "FL-10-RO":2, "TK-RO-4G":2, "PM-CARB":4, "PMP-RO":1 } },
-    { techId:"T-3", items: { "FL-10-RO":4, "PM-CARB":8 } },
+  // --- طلبات الفنيين (بدلاً من مخزون الفنيين) ---
+  const [techRequests, setTechRequests] = useState<TechRequest[]>([
+    {
+      id:"TR-351", techId:"T-1", date:"2025-11-24", status:"open",
+      lines: [
+        { sku:"FL-10-RO", name:"حشوة أولى 10 إنش 5 ميكرون", uom:"قطعة", requested:5, fulfilled:0, action:"تسليم" },
+        { sku:"PM-CARB",  name:"حشوة كربون CTO",            uom:"قطعة", requested:6, fulfilled:0, action:"تسليم" },
+        { sku:"TK-RO-4G", name:"خزان RO 4G",                uom:"خزان", requested:2, fulfilled:0, action:"تبديل" },
+        { sku:"PMP-RO",   name:"مضخة RO",                   uom:"قطعة", requested:1, fulfilled:0, action:"تسليم" },
+      ]
+    },
+    {
+      id:"TR-352", techId:"T-2", date:"2025-11-24", status:"open",
+      lines: [
+        { sku:"FL-10-RO", name:"حشوة أولى 10 إنش 5 ميكرون", uom:"قطعة", requested:3, fulfilled:1, action:"تسليم" },
+        { sku:"PM-CARB",  name:"حشوة كربونية",              uom:"قطعة", requested:4, fulfilled:0, action:"تبديل" },
+      ]
+    },
   ]);
+  const [selectedTech, setSelectedTech] = useState<string>("T-1");
+  const activeReq = useMemo(
+    () => techRequests.find(r => r.techId===selectedTech && r.status==="open") || null,
+    [techRequests, selectedTech]
+  );
 
-  // خصومات/استهلاك من تطبيق الفني (تصل كإشعار)
-  const [consumes, setConsumes] = useState<ConsumeEvent[]>([
-    { id:"EV-9001", techId:"T-1", sku:"FL-10-RO", qty:1, date:"2025-10-29 09:10" },
-  ]);
-
-  // القطع المسترجعة القابلة للإصلاح/بيع الموظفين
+  // مسترجعات + مشتريات + أرشيف كما هي
   const [recycled, setRecycled] = useState<RecyclePart[]>([
     { id:"RC-1001", sku:"PMP-RO", name:"مضخة RO", state:"needs_repair", employeeFactor:0.5, note:"صوت عالي" },
   ]);
 
-  // طلبات شراء
   const [purchases, setPurchases] = useState<PurchaseReq[]>([
     { id:"PR-3001", date:"2025-10-28", status:"draft", items:[{ sku:"PM-CARB", name:"حشوة كربونية", qty:50 }] }
   ]);
 
-  // أرشيف العمليات/المراسلات (يُمكن ارسالها للريسبشن)
   const [logs, setLogs] = useState<Log[]>([
     { t:"2025-10-29 09:11", msg:"استلام إشعار خصم 1× FL-10-RO من الفني T-1" },
   ]);
 
-  // بحث بسيط + اختيار فني
+  // بحث للمخزون
   const [q, setQ] = useState("");
-  const [selectedTech, setSelectedTech] = useState<string>("T-1");
-
-  // ماسح باركود وهمي/إدخال يدوي للتسليم للفني
-  const [barcodeInput, setBarcodeInput] = useState("");
-  const [deliverQty, setDeliverQty] = useState<number>(1);
-
-  // حساب الأصناف الحرجة
+  const itemsFiltered = items.filter(i => (i.sku + i.name + i.category + i.barcode).includes(q));
   const lowItems = useMemo(() => items.filter(i => i.qty <= i.min), [items]);
 
   // أدوات مساعدة
-  const findItemBySku = (sku: string) => items.find(i => i.sku === sku);
-  const skuFromBarcode = (bc: string) => items.find(i => i.barcode === bc)?.sku;
+  const findItemBySku = (sku:string) => items.find(i=>i.sku===sku);
+  const skuFromBarcode = (bc:string) => items.find(i => i.barcode===bc)?.sku;
 
-  // محاكاة حدث يأتينا من تطبيق الفني (خصم)
-  const simulateConsumeFromTech = (techId: string, sku: string, qty: number) => {
-    const id = `EV-${Math.floor(Math.random()*100000)}`;
-    setConsumes(prev => [{ id, techId, sku, qty, date:new Date().toISOString().slice(0,16).replace("T"," ") }, ...prev]);
-    // تحديث مخزون الفني
-    setTechStocks(prev => prev.map(ts => ts.techId === techId ? { ...ts, items: { ...ts.items, [sku]: Math.max(0, (ts.items[sku]||0) - qty) } } : ts));
-    // إشعار وأرشفة
-    setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`إشعار خصم ${qty}× ${sku} من الفني ${techId}` }, ...prev]);
+  // --- مسح باركود على طلب الفني ---
+  const [barcodeInput, setBarcodeInput] = useState("");
+
+  // تحديث نوع الإجراء (شرح) لكل سطر
+  const updateLineAction = (requestId:string, sku:string, action:"تسليم"|"تبديل") => {
+    setTechRequests(prev => prev.map(r => r.id!==requestId ? r : ({
+      ...r,
+      lines: r.lines.map(l => l.sku===sku ? { ...l, action } : l)
+    })));
   };
 
-  // تسليم من المستودع للفني عبر باركود/رقم
-  const deliverToTech = (techId: string, sku: string, qty: number) => {
-    if (!sku || qty <= 0) return;
-    // خصم من المستودع
-    setItems(prev => prev.map(it => it.sku === sku ? { ...it, qty: Math.max(0, it.qty - qty) } : it));
-    // إضافة ليد الفني
-    setTechStocks(prev => prev.map(ts => ts.techId === techId ? { ...ts, items: { ...ts.items, [sku]: (ts.items[sku]||0) + qty } } : ts));
-    // لوج/أرشيف
-    setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`تسليم ${qty}× ${sku} إلى الفني ${techId}` }, ...prev]);
+  const fulfillLineBy = (requestId:string, skuOrBarcode:string, qty:number=1) => {
+    const sku = skuFromBarcode(skuOrBarcode) || skuOrBarcode.trim();
+    if (!sku || qty<=0) return;
+
+    setTechRequests(prev => prev.map(r => {
+      if (r.id !== requestId) return r;
+      const lines = r.lines.map(line => {
+        if (line.sku !== sku) return line;
+        const available = findItemBySku(sku)?.qty || 0;
+        if (available <= 0) return line; // لا يوجد مخزون
+        const need = line.requested - line.fulfilled;
+        const add = Math.min(qty, need, available);
+        if (add <= 0) return line;
+
+        // خصم من المستودع
+        setItems(itms => itms.map(it => it.sku===sku ? { ...it, qty: Math.max(0, it.qty - add) } : it));
+        // لوج
+        setLogs(l => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`تم تعويض ${add}× ${sku} لطلب ${r.id}` }, ...l]);
+
+        // ملاحظة: يمكن لاحقاً لو action==="تبديل" نضيف آلياً إلى "قطع مسترجعة"
+        return { ...line, fulfilled: line.fulfilled + add };
+      });
+      return { ...r, lines };
+    }));
     setBarcodeInput("");
-    setDeliverQty(1);
   };
 
-  // تحويل قطعة مسترجعة
-  const updateRecycleState = (id:string, newState:RecyclePart["state"]) => {
-    setRecycled(prev => prev.map(r => r.id === id ? { ...r, state:newState } : r));
-    setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`تحديث حالة قطعة ${id} إلى ${newState}` }, ...prev]);
+  // اكتمال الطلب
+  const isReqCompleted = (req:TechRequest|null) =>
+    !!req && req.lines.every(l => l.fulfilled >= l.requested);
+
+  const completeRequest = (req:TechRequest) => {
+    setTechRequests(prev => prev.map(r => r.id===req.id ? { ...r, status:"completed" } : r));
+    setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`تم اكتمال طلب الفني ${req.id} (${techs.find(t=>t.id===req.techId)?.name})` }, ...prev]);
   };
 
-  // نقل قطعة مُجدّدة إلى "مخزون الموظفين" (هنا: نزيد كمية الصنف كتمثيل مبسط)
-  const moveRefurbishedToEmployeeStock = (part: RecyclePart) => {
-    // في التطبيق الحقيقي: مخزون منفصل للموظفين. هنا سنضيف ملاحظة فقط.
-    setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`قطعة ${part.id} أُضيفت لسلة بيع الموظفين بنسبة ${part.employeeFactor*100}%` }, ...prev]);
+  // --- اختيار عناصر للشراء (checkbox + qty + طباعة) ---
+  const [selection, setSelection] = useState<Record<string, number>>({}); // sku -> qty
+  const toggleSelect = (sku:string, checked:boolean, defaultQty:number=1) => {
+    setSelection(prev => {
+      const cp = { ...prev };
+      if (!checked) delete cp[sku];
+      else cp[sku] = cp[sku] ?? defaultQty;
+      return cp;
+    });
+  };
+  const setSelQty = (sku:string, val:number) => {
+    setSelection(prev => ({ ...prev, [sku]: Math.max(1, val||1) }));
   };
 
-  // إنشاء طلب شراء من القطع الحرجة
-  const createPurchaseFromLows = () => {
-    if (!lowItems.length) return;
+  const createPurchaseFromSelection = () => {
+    const entries = Object.entries(selection);
+    if (!entries.length) return;
     const id = `PR-${Math.floor(Math.random()*10000)}`;
     const req: PurchaseReq = {
       id, date:new Date().toISOString().slice(0,10), status:"draft",
-      items: lowItems.map(li => ({ sku:li.sku, name:li.name, qty: Math.max(li.min*2 - li.qty, 1) }))
+      items: entries.map(([sku, qty]) => ({ sku, name: findItemBySku(sku)?.name || sku, qty }))
     };
     setPurchases(prev => [req, ...prev]);
-    setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`إنشاء طلب شراء ${id} من الأصناف الحرجة` }, ...prev]);
-    setTab("purchases");
+    setLogs(l => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`إنشاء طلب شراء ${id} من تحديد المستخدم` }, ...l]);
+    setSelection({});
   };
 
-  // مسار موافقات طلب الشراء
-  const advancePurchase = (id:string) => {
-    setPurchases(prev => prev.map(pr => {
-      if (pr.id !== id) return pr;
-      const next: Record<PurchaseReq["status"], PurchaseReq["status"]> = {
-        draft:"sent_manager",
-        sent_manager:"approved",
-        approved:"sent_accounting",
-        sent_accounting:"sent_accounting",
-        rejected:"rejected"
-      };
-      const newStatus = next[pr.status];
-      setLogs(prevL => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`تحديث حالة ${id} إلى ${newStatus}` }, ...prevL]);
-      return { ...pr, status:newStatus };
-    }));
+  const printSelection = () => {
+    const rows = Object.entries(selection).map(([sku, qty]) => {
+      const it = findItemBySku(sku);
+      return `<tr><td>${sku}</td><td>${it?.name||""}</td><td>${it?.uom||""}</td><td>${it?.qty||0}</td><td>${qty}</td></tr>`;
+    }).join("");
+    const html = `
+      <html dir="rtl"><head><meta charset="utf-8"><title>طلبات شراء</title>
+      <style>table{width:100%;border-collapse:collapse}th,td{border:1px solid #999;padding:6px}</style>
+      </head><body>
+      <h3>طلب شراء (محدد)</h3>
+      <table><thead><tr><th>SKU</th><th>الاسم</th><th>الوحدة</th><th>المتاح</th><th>الكمية المطلوبة</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+      <script>window.print();</script>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (w){ w.document.write(html); w.document.close(); }
   };
 
-  // ضبط الحد الأدنى لقطعة
-  const setMinFor = (sku:string, min:number) => {
-    setItems(prev => prev.map(i => i.sku === sku ? { ...i, min: Math.max(0, min) } : i));
-  };
-
-  // غرامة على الفني عند استبدال قطعة سليمة + إنشاء فاتورة (وهمي)
-  const penalizeTechForHealthyPart = (techId:string, sku:string) => {
-    setLogs(prev => [
-      { t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`غرامة على الفني ${techId} لاستبدال قطعة سليمة (${sku})` },
-      { t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`إصدار فاتورة/إشعار للزبون بإرجاع القطعة ${sku}` },
-      ...prev
-    ]);
-  };
-
-  // جداول/قوائم مساعدة
-  const itemsFiltered = items.filter(i => (i.sku + i.name + i.category + i.barcode).includes(q));
-
+  // --- واجهة ---
   return (
     <div className="space-y-6">
       {/* رأس اللوحة */}
       <div className="rounded-3xl p-4 bg-gradient-to-r from-red-800 to-red-600 text-white flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">المستودع</h2>
-          <p className="text-sm text-red-100">إدارة المخزون · الفنيين · القطع المسترجعة · طلبات الشراء</p>
+          <p className="text-sm text-red-100">إدارة المخزون · طلبات الفنيين · القطع المسترجعة · طلبات الشراء</p>
         </div>
         <div className="flex gap-2 text-sm">
           {[
             {key:"stock",label:"المخزون"},
-            {key:"technicians",label:"مخزون الفنيين"},
+            {key:"tech_requests",label:"طلبات الفنيين"},
             {key:"recycled",label:"قطع مسترجعة"},
             {key:"alerts",label:"تنبيهات"},
             {key:"purchases",label:"طلبات شراء"},
@@ -1432,7 +1456,7 @@ const WarehousePanel = () => {
         </div>
       </div>
 
-      {/* المخزون (جدول + بطاقة عند النقر) */}
+      {/* المخزون */}
       {tab === "stock" && (
         <div className="space-y-4">
           <div className="p-4 border rounded-2xl bg-white">
@@ -1440,10 +1464,9 @@ const WarehousePanel = () => {
               <h3 className="font-semibold">المخزون الرئيسي</h3>
               <div className="flex gap-2">
                 <input value={q} onChange={(e)=>setQ(e.target.value)} className="border rounded-2xl p-2 text-sm" placeholder="بحث: SKU/اسم/تصنيف/باركود" />
-                <button onClick={createPurchaseFromLows} className="px-3 py-2 rounded-2xl bg-red-800 text-white text-sm">إنشاء طلب شراء للأصناف الحرجة</button>
+                <button className="px-3 py-2 rounded-2xl bg-red-800 text-white text-sm" onClick={()=>{/* أدوات إضافية لاحقاً */}}>أدوات</button>
               </div>
             </div>
-
             <div className="overflow-auto border rounded-2xl">
               <table className="w-full text-sm">
                 <thead>
@@ -1467,12 +1490,8 @@ const WarehousePanel = () => {
                       <td className="py-2 px-2">{it.qty}</td>
                       <td className="py-2 px-2">
                         <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            className="border rounded-xl px-2 py-1 w-20"
-                            value={it.min}
-                            onChange={(e)=>setMinFor(it.sku, Number(e.target.value))}
-                          />
+                          <input type="number" className="border rounded-xl px-2 py-1 w-20" value={it.min}
+                            onChange={(e)=>setItems(prev=>prev.map(p=>p.sku===it.sku?{...p,min:Number(e.target.value)||0}:p))}/>
                           <span className="text-xs text-gray-500">قطعة</span>
                         </div>
                       </td>
@@ -1484,210 +1503,174 @@ const WarehousePanel = () => {
                 </tbody>
               </table>
             </div>
-
-            <div className="mt-3 text-xs text-gray-500">* طباعة الباركود وقوائم الجرد ستكون من خلال زر طباعة في النسخة النهائية.</div>
+            <div className="mt-3 text-xs text-gray-500">* طباعة الباركود وقوائم الجرد سيتم دعمها لاحقًا.</div>
           </div>
         </div>
       )}
 
-      {/* مخزون الفنيين + طلبات التعويض */}
-      {tab === "technicians" && (
+      {/* طلبات الفنيين */}
+      {tab === "tech_requests" && (
         <div className="grid lg:grid-cols-3 gap-4">
-          {/* لوحة الفنيين والتسليم بالباركود */}
-          <div className="p-4 border rounded-2xl bg-white lg:col-span-2">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">مخزون الفنيين</h3>
-              <div className="flex items-center gap-2">
-                <select className="border rounded-2xl p-2 text-sm" value={selectedTech} onChange={(e)=>setSelectedTech(e.target.value)}>
-                  {techs.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="overflow-auto border rounded-2xl">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-2 px-2">SKU</th>
-                    <th className="py-2 px-2">الاسم</th>
-                    <th className="py-2 px-2">المتاح لدى الفني</th>
-                    <th className="py-2 px-2">حالة المخزون</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map(it => {
-                    const techQty = techStocks.find(ts => ts.techId === selectedTech)?.items[it.sku] || 0;
-                    return (
-                      <tr key={it.sku} className="border-t">
-                        <td className="py-2 px-2">{it.sku}</td>
-                        <td className="py-2 px-2">{it.name}</td>
-                        <td className="py-2 px-2">{techQty}</td>
-                        <td className="py-2 px-2">{techQty <= 1 ? <Badge color="yellow">قريب للنفاد</Badge> : <Badge color="green">جيد</Badge>}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 grid md:grid-cols-3 gap-3">
-              <div className="p-3 border rounded-2xl">
-                <div className="text-sm font-semibold mb-2">تسليم عبر باركود/رقم</div>
-                <input className="border rounded-2xl p-2 w-full text-sm mb-2" placeholder="أدخل باركود أو SKU" value={barcodeInput} onChange={(e)=>setBarcodeInput(e.target.value)} />
-                <div className="flex items-center gap-2">
-                  <input type="number" className="border rounded-2xl p-2 w-24 text-sm" value={deliverQty} onChange={(e)=>setDeliverQty(Math.max(1, Number(e.target.value)||1))} />
-                  <button
-                    className="px-3 py-2 rounded-2xl bg-red-800 text-white text-sm"
-                    onClick={()=>{
-                      const sku = skuFromBarcode(barcodeInput) || barcodeInput.trim();
-                      deliverToTech(selectedTech, sku, deliverQty);
-                    }}
-                  >تسليم للفني</button>
-                </div>
-                <div className="text-xs text-gray-500 mt-1">* يحاكي قارئ الباركود — اضبط التكامل لاحقًا.</div>
-              </div>
-
-              <div className="p-3 border rounded-2xl">
-                <div className="text-sm font-semibold mb-2">محاكاة خصم من تطبيق الفني</div>
-                <div className="flex items-center gap-2">
-                  <select className="border rounded-2xl p-2 text-sm" value={selectedTech} onChange={(e)=>setSelectedTech(e.target.value)}>
-                    {techs.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                  </select>
-                  <select className="border rounded-2xl p-2 text-sm" id="sku-consume">
-                    {items.map(i => <option key={i.sku} value={i.sku}>{i.sku}</option>)}
-                  </select>
-                  <button
-                    className="px-3 py-2 rounded-2xl border text-sm"
-                    onClick={()=>{
-                      const skuSel = (document.getElementById("sku-consume") as HTMLSelectElement).value;
-                      simulateConsumeFromTech(selectedTech, skuSel, 1);
-                    }}
-                  >خصم 1 قطعة</button>
-                </div>
-                <div className="text-xs text-gray-500 mt-1">* عند الخصم يصل إشعار للمستودع ويُسجّل لدى الريسبشن.</div>
-              </div>
-
-              <div className="p-3 border rounded-2xl">
-                <div className="text-sm font-semibold mb-2">استبدال قطعة سليمة (غرامة/فاتورة)</div>
-                <div className="flex items-center gap-2">
-                  <select className="border rounded-2xl p-2 text-sm" id="sku-penalty">
-                    {items.map(i => <option key={i.sku} value={i.sku}>{i.sku}</option>)}
-                  </select>
-                  <button
-                    className="px-3 py-2 rounded-2xl border text-sm"
-                    onClick={()=>{
-                      const skuSel = (document.getElementById("sku-penalty") as HTMLSelectElement).value;
-                      penalizeTechForHealthyPart(selectedTech, skuSel);
-                    }}
-                  >تسجيل غرامة + فاتورة</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* “فواتير الفنيين/طلبات التعويض” = سجّل الاستهلاك/الإشعارات */}
+          {/* قائمة الفنيين */}
           <div className="p-4 border rounded-2xl bg-white">
-            <h4 className="font-semibold mb-2">فواتير الفنيين / طلبات التعويض (إشعارات خصم)</h4>
-            <ul className="text-sm space-y-2 max-h-72 overflow-auto">
-              {consumes.map(c => {
-                const tName = techs.find(t => t.id === c.techId)?.name || c.techId;
-                const iname = findItemBySku(c.sku)?.name || c.sku;
+            <h4 className="font-semibold mb-2">الفنيون</h4>
+            <ul className="text-sm space-y-2">
+              {techs.map(t => {
+                const openCount = techRequests.filter(r=>r.techId===t.id && r.status==="open").length;
                 return (
-                  <li key={c.id} className="p-2 border rounded-2xl flex items-center justify-between">
-                    <div>
-                      <div className="font-medium">{tName}</div>
-                      <div className="text-xs text-gray-500">{c.date} — خصم {c.qty}× {iname} ({c.sku})</div>
-                    </div>
-                    <button className="px-3 py-1.5 rounded-2xl bg-red-800 text-white text-xs"
-                      onClick={()=>deliverToTech(c.techId, c.sku, c.qty)}
-                    >تعويض الآن</button>
+                  <li key={t.id} className={`p-2 rounded-2xl border flex items-center justify-between ${selectedTech===t.id?"bg-slate-50":""}`}>
+                    <button onClick={()=>setSelectedTech(t.id)} className="text-right">{t.name}</button>
+                    <Badge color={openCount? "yellow":"green"}>{openCount} مفتوح</Badge>
                   </li>
                 );
               })}
-              {!consumes.length && <li className="text-xs text-gray-500 text-center py-6">لا يوجد إشعارات حالية</li>}
             </ul>
           </div>
-        </div>
-      )}
 
-      {/* القطع المسترجعة والقابلة للإصلاح */}
-      {tab === "recycled" && (
-        <div className="grid lg:grid-cols-3 gap-4">
+          {/* طلب الفني المختار */}
           <div className="p-4 border rounded-2xl bg-white lg:col-span-2">
-            <h3 className="font-semibold mb-3">سجل القطع المسترجعة</h3>
-            <div className="overflow-auto border rounded-2xl">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-500">
-                    <th className="py-2 px-2">#</th>
-                    <th className="py-2 px-2">SKU</th>
-                    <th className="py-2 px-2">الاسم</th>
-                    <th className="py-2 px-2">الحالة</th>
-                    <th className="py-2 px-2">سعر الموظف</th>
-                    <th className="py-2 px-2">إجراءات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recycled.map(r => {
-                    const base = findItemBySku(r.sku)?.price || 0;
-                    const empPrice = Math.round(base * r.employeeFactor);
-                    return (
-                      <tr key={r.id} className="border-t">
-                        <td className="py-2 px-2">{r.id}</td>
-                        <td className="py-2 px-2">{r.sku}</td>
-                        <td className="py-2 px-2">{r.name}</td>
-                        <td className="py-2 px-2">{r.state === "needs_repair" ? <Badge color="yellow">بحاجة لصيانة</Badge> : <Badge color="green">صالح</Badge>}</td>
-                        <td className="py-2 px-2">{empPrice} (عامل: {r.employeeFactor * 100}%)</td>
-                        <td className="py-2 px-2">
-                          <div className="flex gap-2">
-                            <button className="px-2 py-1 rounded-xl border text-xs" onClick={()=>updateRecycleState(r.id, "refurbished")}>اعتماد كصالح</button>
-                            <button className="px-2 py-1 rounded-xl border text-xs" onClick={()=>moveRefurbishedToEmployeeStock(r)}>نقل لبيع الموظفين</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {!recycled.length && <tr><td colSpan={6} className="text-center text-xs text-gray-500 py-6">لا توجد قطع مسترجعة</td></tr>}
-                </tbody>
-              </table>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-semibold">طلب الفني</h3>
+                {activeReq ? (
+                  <div className="text-xs text-gray-500">
+                    رقم: {activeReq.id} · التاريخ: {activeReq.date} · الحالة: {isReqCompleted(activeReq)? "جاهز للاعتماد" : "قيد التعويض"}
+                  </div>
+                ) : <div className="text-xs text-gray-500">لا يوجد طلب مفتوح لهذا الفني</div>}
+              </div>
+              {activeReq && (
+                <div className="flex items-center gap-2">
+                  <input
+                    className="border rounded-2xl p-2 text-sm w-48"
+                    placeholder="باركود/‏SKU"
+                    value={barcodeInput}
+                    onChange={e=>setBarcodeInput(e.target.value)}
+                    onKeyDown={e=>{ if(e.key==="Enter") fulfillLineBy(activeReq.id, barcodeInput, 1); }}
+                  />
+                  <button className="px-3 py-2 rounded-2xl bg-red-800 text-white text-sm"
+                    onClick={()=>fulfillLineBy(activeReq.id, barcodeInput, 1)}>تعويض</button>
+                </div>
+              )}
             </div>
-          </div>
 
-          <div className="p-4 border rounded-2xl bg-white">
-            <h4 className="font-semibold mb-2">إدخال قطعة مسترجعة</h4>
-            <div className="grid grid-cols-1 gap-2 text-sm">
-              <select className="border rounded-2xl p-2" id="rc-sku">
-                {items.map(i => <option key={i.sku} value={i.sku}>{i.sku} — {i.name}</option>)}
-              </select>
-              <input className="border rounded-2xl p-2" id="rc-name" placeholder="ملاحظة/وصف الحالة" />
-              <select className="border rounded-2xl p-2" id="rc-state">
-                <option value="needs_repair">تحتاج صيانة</option>
-                <option value="refurbished">صالح</option>
-              </select>
-              <input className="border rounded-2xl p-2" id="rc-factor" placeholder="نسبة الموظف (0.5 = نصف السعر)" defaultValue="0.5" />
-              <button className="rounded-2xl px-4 py-2 bg-red-800 text-white"
-                onClick={()=>{
-                  const sku = (document.getElementById("rc-sku") as HTMLSelectElement).value;
-                  const name = findItemBySku(sku)?.name || sku;
-                  const factor = Math.min(1, Math.max(0, Number((document.getElementById("rc-factor") as HTMLInputElement).value)||0.5));
-                  const state = ((document.getElementById("rc-state") as HTMLSelectElement).value as "needs_repair"|"refurbished");
-                  const note = (document.getElementById("rc-name") as HTMLInputElement).value;
-                  const id = `RC-${Math.floor(Math.random()*10000)}`;
-                  setRecycled(prev => [{ id, sku, name, state, employeeFactor:factor, note }, ...prev]);
-                  setLogs(prev => [{ t:new Date().toISOString().slice(0,19).replace("T"," "), msg:`إضافة قطعة مسترجعة ${id} (${sku})` }, ...prev]);
-                }}
-              >حفظ</button>
-            </div>
+            {activeReq && (
+              <>
+                {/* شريط تقدم */}
+                <div className="w-full h-2 bg-slate-200 rounded-full mb-3 overflow-hidden">
+                  {(() => {
+                    const total = activeReq.lines.reduce((a,l)=>a+l.requested,0);
+                    const done  = activeReq.lines.reduce((a,l)=>a+Math.min(l.fulfilled,l.requested),0);
+                    const pct = total? Math.round((done/total)*100):0;
+                    return <div className="h-2 bg-green-600" style={{width:`${pct}%`}} title={`${pct}%`} />;
+                  })()}
+                </div>
+
+                {/* جدول الطلب (مع عمود شرح) */}
+                <div className="overflow-auto border rounded-2xl">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-500">
+                        <th className="py-2 px-2">شرح</th>
+                        <th className="py-2 px-2">اسم المادة</th>
+                        <th className="py-2 px-2">الوحدة</th>
+                        <th className="py-2 px-2">المطلوب</th>
+                        <th className="py-2 px-2">المعوّض</th>
+                        <th className="py-2 px-2">حالة</th>
+                        <th className="py-2 px-2">المتاح بالمستودع</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeReq.lines.map(line => {
+                        const it = findItemBySku(line.sku);
+                        const done = line.fulfilled >= line.requested;
+                        return (
+                          <tr key={line.sku} className={`border-t ${done?"opacity-50":""}`}>
+                            <td className="py-2 px-2">
+                              <select
+                                className="border rounded-xl px-2 py-1 text-sm"
+                                value={line.action}
+                                onChange={e=>updateLineAction(activeReq.id, line.sku, e.target.value as "تسليم"|"تبديل")}
+                              >
+                                <option value="تسليم">تسليم</option>
+                                <option value="تبديل">تبديل</option>
+                              </select>
+                            </td>
+                            <td className="py-2 px-2">{line.name}</td>
+                            <td className="py-2 px-2">{line.uom}</td>
+                            <td className="py-2 px-2">{line.requested}</td>
+                            <td className="py-2 px-2">{line.fulfilled}</td>
+                            <td className="py-2 px-2">{done ? <Badge color="green">مكتمل</Badge> : <Badge color="yellow">ناقص</Badge>}</td>
+                            <td className="py-2 px-2">{it?.qty ?? 0}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 mt-3">
+                  <button
+                    className="px-4 py-2 rounded-2xl border text-sm"
+                    disabled={!isReqCompleted(activeReq)}
+                    onClick={()=>completeRequest(activeReq)}
+                  >
+                    اعتماد اكتمال الطلب
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
-      {/* تنبيهات انخفاض المخزون */}
+      {/* القطع المسترجعة */}
+      {tab === "recycled" && (
+        <div className="p-4 border rounded-2xl bg-white">
+          <h3 className="font-semibold mb-3">سجل القطع المسترجعة</h3>
+          <div className="overflow-auto border rounded-2xl">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-gray-500">
+                  <th className="py-2 px-2">#</th><th className="py-2 px-2">SKU</th><th className="py-2 px-2">الاسم</th>
+                  <th className="py-2 px-2">الحالة</th><th className="py-2 px-2">سعر الموظف</th><th className="py-2 px-2">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recycled.map(r => {
+                  const base = findItemBySku(r.sku)?.price || 0;
+                  const empPrice = Math.round(base * r.employeeFactor);
+                  return (
+                    <tr key={r.id} className="border-t">
+                      <td className="py-2 px-2">{r.id}</td>
+                      <td className="py-2 px-2">{r.sku}</td>
+                      <td className="py-2 px-2">{r.name}</td>
+                      <td className="py-2 px-2">{r.state === "needs_repair" ? <Badge color="yellow">بحاجة لصيانة</Badge> : <Badge color="green">صالح</Badge>}</td>
+                      <td className="py-2 px-2">{empPrice} (عامل: {r.employeeFactor*100}%)</td>
+                      <td className="py-2 px-2">
+                        <div className="flex gap-2">
+                          <button className="px-2 py-1 rounded-xl border text-xs"
+                            onClick={()=>setRecycled(prev=>prev.map(x=>x.id===r.id?{...x,state:"refurbished"}:x))}>اعتماد كصالح</button>
+                          <button className="px-2 py-1 rounded-xl border text-xs"
+                            onClick={()=>setLogs(l=>[{t:new Date().toISOString().slice(0,19).replace("T"," "),msg:`${r.id} إلى بيع الموظفين`} ,...l])}>نقل لبيع الموظفين</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {!recycled.length && <tr><td colSpan={6} className="text-center text-xs text-gray-500 py-6">لا توجد قطع مسترجعة</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* تنبيهات المخزون */}
       {tab === "alerts" && (
         <div className="p-4 border rounded-2xl bg-white">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">الأصناف ذات المخزون المنخفض</h3>
-            <button onClick={createPurchaseFromLows} className="px-3 py-2 rounded-2xl bg-red-800 text-white text-sm">إنشاء طلب شراء مقترح</button>
+            <button className="px-3 py-2 rounded-2xl bg-red-800 text-white text-sm"
+              onClick={()=>{/* يمكنك تحويل المحدد لطلب شراء */}}>إجراء</button>
           </div>
           <div className="grid md:grid-cols-3 gap-3">
             {lowItems.map(li => (
@@ -1695,7 +1678,7 @@ const WarehousePanel = () => {
                 <div className="font-medium">{li.name}</div>
                 <div className="text-xs text-gray-500">SKU: {li.sku} · الموقع: {li.bin}</div>
                 <div className="mt-1 text-sm">الكمية: <span className="font-semibold">{li.qty}</span> / حد أدنى: {li.min}</div>
-                <div className="mt-2"><Badge color="red">تنبيه: منخفض</Badge></div>
+                <div className="mt-2"><Badge color="red">منخفض</Badge></div>
               </div>
             ))}
             {!lowItems.length && <div className="text-xs text-gray-500 p-3 border rounded-2xl text-center">لا توجد أصناف حرجة</div>}
@@ -1703,57 +1686,99 @@ const WarehousePanel = () => {
         </div>
       )}
 
-      {/* طلبات الشراء + الموافقات */}
+      {/* طلبات الشراء (اختيار من كل الأصناف + طباعة) */}
       {tab === "purchases" && (
-        <div className="p-4 border rounded-2xl bg-white">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">طلبات الشراء</h3>
-            <div className="text-xs text-gray-500">المسار: مستودع ← المدير ← المحاسبة</div>
-          </div>
-          <div className="overflow-auto border rounded-2xl">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500">
-                  <th className="py-2 px-2">#</th>
-                  <th className="py-2 px-2">التاريخ</th>
-                  <th className="py-2 px-2">الأصناف</th>
-                  <th className="py-2 px-2">الحالة</th>
-                  <th className="py-2 px-2">إجراء</th>
-                </tr>
-              </thead>
-              <tbody>
-                {purchases.map(pr => (
-                  <tr key={pr.id} className="border-t">
-                    <td className="py-2 px-2">{pr.id}</td>
-                    <td className="py-2 px-2">{pr.date}</td>
-                    <td className="py-2 px-2">{pr.items.map(i=>`${i.sku}×${i.qty}`).join(" ، ")}</td>
-                    <td className="py-2 px-2">
-                      {pr.status === "draft" && <Badge color="gray">مسودة</Badge>}
-                      {pr.status === "sent_manager" && <Badge color="blue">لدى المدير</Badge>}
-                      {pr.status === "approved" && <Badge color="green">معتمد</Badge>}
-                      {pr.status === "sent_accounting" && <Badge color="yellow">لدى المحاسبة</Badge>}
-                      {pr.status === "rejected" && <Badge color="red">مرفوض</Badge>}
-                    </td>
-                    <td className="py-2 px-2">
-                      {pr.status !== "sent_accounting" && pr.status !== "rejected" ? (
-                        <button className="px-3 py-1.5 rounded-2xl border text-xs" onClick={()=>advancePurchase(pr.id)}>الانتقال للخطوة التالية</button>
-                      ) : <span className="text-xs text-gray-500">—</span>}
-                    </td>
+        <div className="space-y-4">
+          <div className="p-4 border rounded-2xl bg-white">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">إنشاء طلب شراء</h3>
+              <div className="text-xs text-gray-500">حدد الأصناف وضع الكميات ثم أنشئ الطلب أو اطبعه</div>
+            </div>
+
+            <div className="overflow-auto border rounded-2xl">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-2 px-2">اختيار</th>
+                    <th className="py-2 px-2">SKU</th>
+                    <th className="py-2 px-2">الاسم</th>
+                    <th className="py-2 px-2">الوحدة</th>
+                    <th className="py-2 px-2">المتاح</th>
+                    <th className="py-2 px-2">الكمية المطلوبة</th>
                   </tr>
-                ))}
-                {!purchases.length && <tr><td colSpan={5} className="text-center text-xs text-gray-500 py-6">لا توجد طلبات</td></tr>}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items.map(it => {
+                    const checked = Object.prototype.hasOwnProperty.call(selection, it.sku);
+                    return (
+                      <tr key={it.sku} className="border-t">
+                        <td className="py-2 px-2">
+                          <input type="checkbox" checked={checked}
+                            onChange={e=>toggleSelect(it.sku, e.target.checked, Math.max(it.min*2 - it.qty, 1))}/>
+                        </td>
+                        <td className="py-2 px-2">{it.sku}</td>
+                        <td className="py-2 px-2">{it.name}</td>
+                        <td className="py-2 px-2">{it.uom}</td>
+                        <td className="py-2 px-2">{it.qty}</td>
+                        <td className="py-2 px-2">
+                          <input className="border rounded-xl px-2 py-1 w-24"
+                            value={selection[it.sku] ?? ""}
+                            disabled={!checked}
+                            onChange={e=>setSelQty(it.sku, Number(e.target.value))}
+                            placeholder="عدد"/>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 mt-3">
+              <button className="px-4 py-2 rounded-2xl border text-sm" onClick={printSelection}>طباعة المحدد</button>
+              <button className="px-4 py-2 rounded-2xl bg-red-800 text-white text-sm" onClick={createPurchaseFromSelection}>إنشاء طلب شراء من المحدد</button>
+            </div>
+          </div>
+
+          {/* قائمة الطلبات المنشأة */}
+          <div className="p-4 border rounded-2xl bg-white">
+            <h4 className="font-semibold mb-2">طلبات الشراء</h4>
+            <div className="overflow-auto border rounded-2xl">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500">
+                    <th className="py-2 px-2">#</th><th className="py-2 px-2">التاريخ</th><th className="py-2 px-2">الأصناف</th><th className="py-2 px-2">الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {purchases.map(pr=>(
+                    <tr key={pr.id} className="border-t">
+                      <td className="py-2 px-2">{pr.id}</td>
+                      <td className="py-2 px-2">{pr.date}</td>
+                      <td className="py-2 px-2">{pr.items.map(i=>`${i.sku}×${i.qty}`).join(" ، ")}</td>
+                      <td className="py-2 px-2">
+                        {pr.status==="draft" && <Badge color="gray">مسودة</Badge>}
+                        {pr.status==="sent_manager" && <Badge color="blue">لدى المدير</Badge>}
+                        {pr.status==="approved" && <Badge color="green">معتمد</Badge>}
+                        {pr.status==="sent_accounting" && <Badge color="yellow">لدى المحاسبة</Badge>}
+                        {pr.status==="rejected" && <Badge color="red">مرفوض</Badge>}
+                      </td>
+                    </tr>
+                  ))}
+                  {!purchases.length && <tr><td colSpan={4} className="text-center text-xs text-gray-500 py-6">لا توجد طلبات</td></tr>}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* الأرشيف (يسجّل أيضًا للريسبشن لاحقًا) */}
+      {/* الأرشيف */}
       {tab === "archive" && (
         <div className="p-4 border rounded-2xl bg-white">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold">أرشيف العمليات والمراسلات</h3>
-            <button className="px-3 py-2 rounded-2xl border text-sm">تصدير PDF</button>
+            <button className="px-3 py-2 rounded-2xl border text-sm" onClick={()=>window.print()}>طباعة الصفحة</button>
           </div>
           <ul className="text-sm space-y-2 max-h-80 overflow-auto">
             {logs.map((l, i) => (
@@ -1764,14 +1789,12 @@ const WarehousePanel = () => {
             ))}
             {!logs.length && <li className="text-center text-xs text-gray-500 py-6">الأرشيف فارغ</li>}
           </ul>
-          <div className="text-xs text-gray-500 mt-3">
-            * في التكامل الفعلي: تُرسل هذه الأحداث إلى لوحة الريسبشن (Append إلى سجلّه) وإلى المحاسبة عند اللزوم.
-          </div>
         </div>
       )}
     </div>
   );
 };
+
 
 const CCTVPanel = () => {
   const [filter, setFilter] = useState("all"); // all | online | offline
